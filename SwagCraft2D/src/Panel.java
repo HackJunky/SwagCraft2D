@@ -182,10 +182,10 @@ public class Panel extends JPanel {
 					}
 				}
 				//Paint Drops
-				for (WorldDrop d : gameWorld.getTerrainDrops()) {
-					BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Half.png"));
-					g2d.drawImage(tileImage, (int)d.getX() * BLOCK_SIZE, (int)d.getY() * BLOCK_SIZE, DROP_SIZE, DROP_SIZE, this);
-				}
+//				for (WorldDrop d : gameWorld.getTerrainDrops()) {
+//					BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Half.png"));
+//					g2d.drawImage(tileImage, (int)d.getX() * BLOCK_SIZE, (int)d.getY() * BLOCK_SIZE, DROP_SIZE, DROP_SIZE, this);
+//				}
 				//Paint Player
 				try {
 					Position playerLoc = gameWorld.getPlayer().getPosition();

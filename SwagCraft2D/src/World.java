@@ -1,3 +1,4 @@
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Random;
@@ -10,7 +11,7 @@ public class World {
 	private int WORLD_SIZE_Y = 128;
 	private int WORLD_MAX_STRUCTURES = 10;
 	private final int TICK_SPEED = 10;
-	private final int TICKS_PER_SECOND = 1000 / TICK_SPEED;
+	private final int TICKS_PER_SECOND = 100 / TICK_SPEED;
 	private final int TICK_BLOCK_ITERATIONS = 2;
 	//World Variables
 	private BaseEntity[][] terrainMap;
@@ -110,8 +111,9 @@ public class World {
 		}
 		if (player == null) {
 			System.out.println("Converting 'null' player to Player!");
-			player = new Player(new Position(WORLD_SIZE_X / 2 * BLOCK_SIZE, 30 * BLOCK_SIZE));
-			System.out.println("Player Spawned: (" + getPlayer().getPosition().x + ", " + getPlayer().getPosition().y + "). Approximate: (" + ((int)WORLD_SIZE_X / 2) + ", " + ((int)WORLD_SIZE_Y / 2) + ").");
+			player = new Player(new Position((WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
+			player.convertCoords(BLOCK_SIZE);
+			System.out.println("Player Spawned: (" + getPlayer().getPosition().x + ", " + getPlayer().getPosition().y + "). Approximate: (" + (getPlayer().getPosition().x / BLOCK_SIZE) + ", " + (getPlayer().getPosition().y / BLOCK_SIZE) + ").");
 		}
 	}
 
@@ -179,7 +181,7 @@ public class World {
 
 	public void destroyBlock(int x, int y) {
 		spawnBlock(Block.BlockType.Air, x, y);
-		
+
 	}
 
 	public int getIterations() {
@@ -317,18 +319,20 @@ public class World {
 				}
 				blockIterations = 0;
 			}
-			if (1==0) {
-				//Player Iterations
-				int blockX = (int)getPlayer().getPosition().x / BLOCK_SIZE;
-				int blockY = (int)getPlayer().getPosition().y / BLOCK_SIZE;
-				if (((Block)terrainMap[blockX][blockY + 1]).getCollision() == Block.BlockCollision.None) {
-					getPlayer().setJump(true);
-					System.out.println(((Block)terrainMap[blockX][blockY + 1]).getType());
-					getPlayer().translate(0, 1);
-					iterations++;
+			//Player Iterations
+			int blockX = getPlayer().getTrueLocation().x - 1;
+			int blockY = getPlayer().getTrueLocation().y + 2;
+			if (((Block)terrainMap[blockX][blockY - 1]).getCollision() == Block.BlockCollision.None) {
+				getPlayer().setJump(true);
+				getPlayer().translate(0, -10);
+				iterations++;
+			}else{
+				if (getPlayer().getTrueLocation().x / BLOCK_SIZE < 1) {
+					getPlayer().translate(0, -0.1);
 				}
 			}
 		}
+		getPlayer().convertCoords(BLOCK_SIZE);
 	}
 
 	public boolean testType (int x, int y, Block.BlockType b) {
@@ -337,7 +341,7 @@ public class World {
 		}
 		return false;
 	}
-	
+
 	public Player getPlayer() {
 		return player;
 	}

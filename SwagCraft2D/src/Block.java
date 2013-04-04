@@ -64,4 +64,9 @@ public class Block extends BaseEntity{
 	public boolean isCollider() {
 		return false;
 	}
+	
+	@Override
+	public String toString() {
+		return blockType.toString() + ". Collisions: " + blockCollision.toString() + ". Type: " + blockSize.toString();
+	}
 }

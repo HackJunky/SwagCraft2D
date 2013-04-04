@@ -24,6 +24,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +45,7 @@ public class Panel extends JPanel {
 	private static final long serialVersionUID = -5151041547543472432L;
 	static final double version = 1.0;
 	int TARGET_X = 40;
-	int BLOCK_SIZE = 16;
+	int BLOCK_SIZE = 21;
 	int HOTBAR_TILE_SIZE = 50;
 	int HOTBAR_TILE_OFFSET = 3;
 	int HOTBAR_TILE_QTY = 9;
@@ -94,6 +95,9 @@ public class Panel extends JPanel {
 	private Point mouseLoc = new Point(0, 0);
 
 	public Panel() {
+		while ((this.getSize().width / BLOCK_SIZE) > TARGET_X) {
+			BLOCK_SIZE++;
+		}
 		try {
 			GraphicsEnvironment e = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			e.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("data/MCFont.ttf")));
@@ -119,31 +123,31 @@ public class Panel extends JPanel {
 	}
 
 	public void reticulateSizing() {
-		try{
-			int oldSize = BLOCK_SIZE;
-			if (BLOCK_SIZE > 0) {
-				while ((this.getSize().width / BLOCK_SIZE) < TARGET_X) {
-					BLOCK_SIZE--;
-				}
-			}else {
-				BLOCK_SIZE = 16;
-				System.out.println("Tile Size Reticulation: Tiles are reset to avoid divsion by zero.");
-			}
-			if (BLOCK_SIZE > 0) {
-				while ((this.getSize().width / BLOCK_SIZE) > TARGET_X) {
-					BLOCK_SIZE++;
-				}
-			}else {
-				BLOCK_SIZE = 16;
-				System.out.println("Tile Size Reticulation: Tiles are reset to avoid divsion by zero.");
-			}
-			if (oldSize != BLOCK_SIZE) {
-				System.out.println("Tile Size Reticulation: Tiles are now " + BLOCK_SIZE + " px.");
-			}
-			gameWorld.setBlockSize(BLOCK_SIZE);
-		}catch (Exception e) {
-
-		}
+		//		try{
+		//			int oldSize = BLOCK_SIZE;
+		//			if (BLOCK_SIZE > 0) {
+		//				while ((this.getSize().width / BLOCK_SIZE) < TARGET_X) {
+		//					BLOCK_SIZE--;
+		//				}
+		//			}else {
+		//				BLOCK_SIZE = 16;
+		//				System.out.println("Tile Size Reticulation: Tiles are reset to avoid divsion by zero.");
+		//			}
+		//			if (BLOCK_SIZE > 0) {
+		//				while ((this.getSize().width / BLOCK_SIZE) > TARGET_X) {
+		//					BLOCK_SIZE++;
+		//				}
+		//			}else {
+		//				BLOCK_SIZE = 16;
+		//				System.out.println("Tile Size Reticulation: Tiles are reset to avoid divsion by zero.");
+		//			}
+		//			if (oldSize != BLOCK_SIZE) {
+		//				System.out.println("Tile Size Reticulation: Tiles are now " + BLOCK_SIZE + " px.");
+		//			}
+		//			gameWorld.setBlockSize(BLOCK_SIZE);
+		//		}catch (Exception e) {
+		//
+		//		}
 	}
 
 	@Override 
@@ -181,29 +185,41 @@ public class Panel extends JPanel {
 						}
 					}
 				}
-				//Paint Drops
-//				for (WorldDrop d : gameWorld.getTerrainDrops()) {
-//					BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Half.png"));
-//					g2d.drawImage(tileImage, (int)d.getX() * BLOCK_SIZE, (int)d.getY() * BLOCK_SIZE, DROP_SIZE, DROP_SIZE, this);
-//				}
 				//Paint Player
-				try {
-					Position playerLoc = gameWorld.getPlayer().getPosition();
-					Image playerImage = gameWorld.getPlayer().getImage();
-					if (gameWorld.getPlayer().isInRect(new Rectangle(viewStartX, viewStartY, viewX, viewY))) {
-						g2d.drawImage(playerImage, (int)playerLoc.x - (viewStartX * BLOCK_SIZE), (int)playerLoc.y - (viewStartY * BLOCK_SIZE), playerImage.getWidth(null) + BLOCK_SIZE, playerImage.getHeight(null) + BLOCK_SIZE, this);
-					}
-				}catch (Exception e) {
+				Position playerLoc = gameWorld.getPlayer().getPosition();
+				Point playerPoint = gameWorld.getPlayer().getTrueLocation();
+				Image playerImage = gameWorld.getPlayer().getImage();
+//				int drawX = (int)((playerPoint.x - 1) - viewStartX) * BLOCK_SIZE;
+//				int drawY = (int)((playerPoint.y - 1) - viewStartY) * BLOCK_SIZE;
+				int drawX = (int)playerLoc.x / BLOCK_SIZE;
+				int drawY = (int)playerLoc.y / BLOCK_SIZE;
+				g2d.drawImage(playerImage, drawX, drawY, BLOCK_SIZE, 2 * BLOCK_SIZE, this);
+				System.out.println("Drawing player at: (" + drawX + ", " + drawY + ") within the bounds of (" + viewStartX + ", " + viewStartY + ") to (" + viewX + ", " + viewY + ").");
 
+				//Paint Player Tooltip
+				String pTooltip = "Player (" + drawX + ", " + drawY + ")";
+				g2d.setColor(Color.BLACK);
+				if (drawX > 0 && drawY > 0) {
+					g2d.drawString(pTooltip, drawX - (fm.stringWidth(pTooltip) / 2), drawY - fm.getAscent());
 				}
+				g2d.setColor(Color.black);
+
+				//Paint Drops
+				//				for (WorldDrop d : gameWorld.getTerrainDrops()) {
+				//					BufferedImage tileImage = ImageTool.toBufferedImage(d.getImage());
+				//					g2d.drawImage(tileImage, (int)d.getX() * BLOCK_SIZE * (DROP_SIZE / 2), (int)d.getY() * BLOCK_SIZE * (DROP_SIZE / 2), DROP_SIZE, DROP_SIZE, this);
+				//				}
+
 				//Paint Alpha
+
 				//Paint Tooltip
 				String tooltip = gameWorld.get(trueX, trueY);
-				g2d.setColor(Color.cyan);
+				g2d.setColor(Color.BLUE);
 				if (mouseLoc.x > 0 && mouseLoc.y > 0) {
 					g2d.drawString(tooltip, mouseLoc.x, mouseLoc.y);
 				}
 				g2d.setColor(Color.black);
+
 				//Paint Hotbar
 				for (int i = 1; i <= HOTBAR_TILE_QTY; i++) {
 					int Gi = i; //graphics offset
@@ -211,25 +227,26 @@ public class Panel extends JPanel {
 						if (gameWorld.getPlayer() != null) {
 							if (gameWorld.getPlayer().getSelectedSpace() == i) {
 								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Selected.png"));
-								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE) - HOTBAR_TILE_OFFSET, this.getSize().height - HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, this);
+								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE) - HOTBAR_TILE_OFFSET, this.getSize().height - HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET - 5, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, this);
 							}else {
 								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
-								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
+								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 5, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
 							}
 							if (gameWorld.getPlayer().getHotbar()[i - 1] != null) {
 								Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
 								BufferedImage aTile = ImageTool.toBufferedImage(eTile);
-								g2d.drawImage(aTile, (hotbarStartX + (Gi * HOTBAR_TILE_SIZE)) + HOTBAR_TILE_OFFSET, (this.getSize().height - HOTBAR_TILE_SIZE) + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, this);
+								g2d.drawImage(aTile, (hotbarStartX + (Gi * HOTBAR_TILE_SIZE)) + HOTBAR_TILE_OFFSET, (this.getSize().height - HOTBAR_TILE_SIZE) + HOTBAR_TILE_OFFSET - 5, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, this);
 							}
 						}else{
 							BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
-							g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
+							g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 5, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
 						}
 					}catch (Exception e) {
 						e.printStackTrace();
 						//System.out.println("CRITICAL ERROR - MAP NOT READY. (You should not be seeing this)");
 					}
 				}
+
 				//Paint Hearts
 				try {
 					if (Math.round(gameWorld.getPlayer().getHealth()) == gameWorld.getPlayer().getHealth()) {
@@ -273,6 +290,7 @@ public class Panel extends JPanel {
 				}catch (Exception e) {
 					e.printStackTrace();
 				}
+
 				//Paint Hunger
 				try {
 					int max = gameWorld.getPlayer().getMaxHunger();
@@ -317,16 +335,20 @@ public class Panel extends JPanel {
 				}catch (Exception e) {
 					e.printStackTrace();
 				}
+
 				//Paint XP Bar Empty
 				BufferedImage emptyBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Empty.png"));
 				g2d.drawImage(emptyBarImage, xpEmptyStartX, xpBarY, XP_WIDTH, XP_HEIGHT, this);
+
 				//Paint XP Bar Full
 				BufferedImage fullBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Full.png"));
 				g2d.drawImage(fullBarImage, xpFullStartX, xpBarY, ((int)xpFullEndX), XP_HEIGHT, this);
+
 				//Paint XP Text
 				String xp = String.valueOf(gameWorld.getPlayer().getXP());
 				g2d.setColor(Color.GREEN);
 				g2d.drawString(xp, (xpEmptyStartX + (XP_WIDTH / 2)) - (fm.stringWidth(xp) / 2) - 2, xpBarY + 10);
+
 				//Paint Armor
 				try {
 					if (Math.round(gameWorld.getPlayer().getArmor()) == gameWorld.getPlayer().getArmor()) {
@@ -410,16 +432,17 @@ public class Panel extends JPanel {
 		hungerStartX = hotbarStartX + (HOTBAR_TILE_SIZE * 6) - 2;
 		hungerStartY = healthStartY;
 	}
-	
+
 	public void calculateViewport() {
-		Position playerCoords = gameWorld.getPlayer().getPosition();
-		Point p = new Point((int)playerCoords.x, (int)playerCoords.y);
-		//		viewStartX = (int)(((gameWorld.getPlayer().getPosition().x / BLOCK_SIZE) - ((gameWorld.getPlayer().getPosition().x / BLOCK_SIZE) / 2)) / BLOCK_SIZE); 
-		//		viewStartY = (int)(((gameWorld.getPlayer().getPosition().y / BLOCK_SIZE) - ((gameWorld.getPlayer().getPosition().y / BLOCK_SIZE) / 2)) / BLOCK_SIZE);
-		viewStartX = 245;
-		viewStartY = 60;
-		viewX = viewStartX + (this.getSize().width / BLOCK_SIZE) + 3;
-		viewY = viewStartY + (this.getSize().height / BLOCK_SIZE) + 3;
+		if (gameWorld.getPlayer().getTrueLocation().x < viewStartX || gameWorld.getPlayer().getTrueLocation().x > viewX) {
+			if (gameWorld.getPlayer().getTrueLocation().y < viewStartY || gameWorld.getPlayer().getTrueLocation().y > viewY) {
+				viewStartX = gameWorld.getPlayer().getTrueLocation().x - ((this.getWidth() / BLOCK_SIZE) / 4);
+				viewStartY = gameWorld.getPlayer().getTrueLocation().y - ((this.getHeight() / BLOCK_SIZE) / 4);
+				viewX = viewStartX + (this.getSize().width / BLOCK_SIZE) + 3;
+				viewY = viewStartY + (this.getSize().height / BLOCK_SIZE) + 3;
+				System.out.println("Calculated Viewport: (" + viewStartX + " - " + (viewX) + ", " + viewStartY + " - " + viewY + ").");
+			}
+		}
 		getTrueCoords();
 	}
 
@@ -451,9 +474,13 @@ public class Panel extends JPanel {
 	}
 
 	public class GameListener implements ActionListener, KeyListener, MouseListener, ComponentListener, MouseMotionListener {
+		private final int PLACE_SPACING = 5;
+
 		private boolean keyEnabled = false;
 		private boolean mouseEnabled = false;
 		private boolean isJump = false;
+		private boolean mouseDown = false;
+		private int lastPlace = 0;
 
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
@@ -470,6 +497,13 @@ public class Panel extends JPanel {
 				calculateHungerStart();
 				setTitle();
 				isJump = false;
+				if (mouseDown) {
+					lastPlace++;
+					if (lastPlace == PLACE_SPACING) {
+						gameWorld.spawnBlock(Block.BlockType.Sand, trueX, trueY);
+						lastPlace = 0;
+					}
+				}
 			}
 		}
 
@@ -592,7 +626,7 @@ public class Panel extends JPanel {
 		public void mousePressed(MouseEvent e) {
 			if (mouseEnabled) {
 				if (e.getButton() == MouseEvent.BUTTON3) {
-					gameWorld.spawnBlock(Block.BlockType.Sand, trueX, trueY);
+					mouseDown = true;
 				}else if (e.getButton() == MouseEvent.BUTTON1) {
 					gameWorld.destroyBlock(trueX, trueY);
 				}
@@ -602,7 +636,9 @@ public class Panel extends JPanel {
 		@Override
 		public void mouseReleased(MouseEvent e) {
 			if (mouseEnabled) {
-
+				if (e.getButton() == MouseEvent.BUTTON3) {
+					mouseDown = false;
+				}
 			}
 		}
 

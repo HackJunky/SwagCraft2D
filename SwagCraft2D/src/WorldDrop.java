@@ -3,7 +3,7 @@ import java.awt.Toolkit;
 import java.io.IOException;
 
 public class WorldDrop extends BaseEntity{
-	Block.BlockType dropType;
+	private Block.BlockType dropType;
 	private double x;
 	private double y;
 	
@@ -19,6 +19,10 @@ public class WorldDrop extends BaseEntity{
 	
 	public double getY() {
 		return y;
+	}
+	
+	public Block.BlockType getType() {
+		return dropType;
 	}
 	
 	@Override

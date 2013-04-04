@@ -1,9 +1,12 @@
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 
 public class Player {
+	//Sets
+	private int BLOCK_SIZE = 0;
 	//Compiler Conditions
 	final int HOTBAR_SIZE = new Panel().HOTBAR_TILE_QTY;
 	final int INVENTORY_WIDTH = 10;
@@ -20,6 +23,7 @@ public class Player {
 	private double playerHealth;
 	private double playerHunger;
 	private Position playerPosition;
+	private Point playerLocation;
 	private WorldDrop[] playerHotbar;
 	private int selectedSpot = 1;
 	private WorldDrop[][] playerInventory;
@@ -28,7 +32,8 @@ public class Player {
 	boolean isJumping = false;
 	boolean isJumpApex = false;
 
-	public Player(Position pos) {
+	public Player(Position pos, int blockSize) {
+		BLOCK_SIZE = blockSize;
 		playerPosition = pos;
 		playerHotbar = new WorldDrop[HOTBAR_SIZE];
 		playerInventory = new WorldDrop[INVENTORY_WIDTH][INVENTORY_HEIGHT];
@@ -36,6 +41,15 @@ public class Player {
 		playerArmor = 0;
 		playerHunger = PLAYER_MAX_HUNGER;
 		playerXP = 0;
+	}
+	
+	public Point getTrueLocation() {
+		return playerLocation;
+	}
+	
+	public void convertCoords(int size) {
+		BLOCK_SIZE = size;
+		playerLocation = new Point((int)playerPosition.x / BLOCK_SIZE, (int)playerPosition.y / BLOCK_SIZE);
 	}
 
 	public void setJump (boolean j) {
@@ -135,7 +149,7 @@ public class Player {
 	}
 	
 	public void translate(double x, double y) {
-		playerPosition = new Position(playerPosition.x + x, playerPosition.y + y);
+		playerPosition = new Position(playerPosition.x + x, playerPosition.y - y);
 		//System.out.println("Player translated (" + x + ", " + y + ") to coords (" + playerPosition.x + ", " + playerPosition.y + ")");
 	}
 	

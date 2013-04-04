@@ -29,7 +29,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 
 import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 
 public class Frame extends JFrame{
@@ -89,6 +88,7 @@ public class Frame extends JFrame{
 	private int hungerGap = 3;
 	//Cursor Vars
 	private Point mouseLoc = new Point(0, 0);
+	
 	public Frame() {
 		setUndecorated(true);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -162,12 +162,10 @@ public class Frame extends JFrame{
 					Position playerLoc = gameWorld.getPlayer().getPosition();
 					Point playerPoint = gameWorld.getPlayer().getTrueLocation();
 					Image playerImage = gameWorld.getPlayer().getImage();
-					//					int drawX = (int)((playerPoint.x - 1) - viewStartX) * BLOCK_SIZE;
-					//					int drawY = (int)((playerPoint.y - 1) - viewStartY) * BLOCK_SIZE;
-					int drawX = (int)(playerLoc.x / BLOCK_SIZE);
-					int drawY = (int)(playerLoc.y / BLOCK_SIZE);
+					int drawX = (int)(playerLoc.x / BLOCK_SIZE) + 1;
+					int drawY = (int)(playerLoc.y / BLOCK_SIZE) + 1;
 					g2d.drawImage(playerImage, drawX, drawY, BLOCK_SIZE, 2 * BLOCK_SIZE, this);
-					System.out.println("Drawing player at: (" + drawX + ", " + drawY + ") within the bounds of (" + viewStartX + ", " + viewStartY + ") to (" + viewX + ", " + viewY + ").");
+					//System.out.println("Drawing player at: (" + drawX + ", " + drawY + ") within the bounds of (" + viewStartX + ", " + viewStartY + ") to (" + viewX + ", " + viewY + ").");
 
 					//Paint Player Tooltip
 					String pTooltip = "Player (" + drawX + ", " + drawY + ")";
@@ -418,7 +416,7 @@ public class Frame extends JFrame{
 				viewStartY = gameWorld.getPlayer().getTrueLocation().y - ((this.getHeight() / BLOCK_SIZE) / 4);
 				viewX = viewStartX + (this.getSize().width / BLOCK_SIZE) + 3;
 				viewY = viewStartY + (this.getSize().height / BLOCK_SIZE) + 3;
-				System.out.println("Calculated Viewport: (" + viewStartX + " - " + (viewX) + ", " + viewStartY + " - " + viewY + ").");
+				//System.out.println("Calculated Viewport: (" + viewStartX + " - " + (viewX) + ", " + viewStartY + " - " + viewY + ").");
 //			}
 //		}
 		getTrueCoords();
@@ -459,7 +457,9 @@ public class Frame extends JFrame{
 		private boolean isJump = false;
 		private boolean mouseDown = false;
 		private int lastPlace = 0;
-
+		private boolean moveLeft = false;
+		private boolean moveRight = false;
+		
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (gameWorld != null) {
@@ -480,6 +480,12 @@ public class Frame extends JFrame{
 						gameWorld.spawnBlock(Block.BlockType.Sand, trueX, trueY);
 						lastPlace = 0;
 					}
+				}
+				if (moveLeft) {
+					gameWorld.getPlayer().moveLeft(10);
+				}
+				if (moveRight) {
+					gameWorld.getPlayer().moveRight(10);
 				}
 			}
 			draw();
@@ -519,11 +525,11 @@ public class Frame extends JFrame{
 				if (e.getKeyChar() == ' ') {
 					isJump = true;
 				}
-				if (e.getKeyChar() == 'A') {
-					gameWorld.getPlayer().moveLeft(1);
+				if (e.getKeyChar() == 'a') {
+					moveLeft = true;
 				}
-				if (e.getKeyChar() == 'D') {
-					gameWorld.getPlayer().moveRight(1);
+				if (e.getKeyChar() == 'd') {
+					moveRight = true;
 				}
 			}
 		}
@@ -531,7 +537,15 @@ public class Frame extends JFrame{
 		@Override
 		public void keyReleased(KeyEvent e) {
 			if (keyEnabled) {
-
+				if (e.getKeyChar() == ' ') {
+					isJump = false;
+				}
+				if (e.getKeyChar() == 'a') {
+					moveLeft = false;
+				}
+				if (e.getKeyChar() == 'd') {
+					moveRight = false;
+				}
 			}
 		}
 

@@ -111,7 +111,7 @@ public class World {
 		}
 		if (player == null) {
 			System.out.println("Converting 'null' player to Player!");
-			player = new Player(new Position((WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
+			player = new Player(new Position((int)(WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
 			player.convertCoords(BLOCK_SIZE);
 			System.out.println("Player Spawned: (" + getPlayer().getPosition().x + ", " + getPlayer().getPosition().y + "). Approximate: (" + (getPlayer().getPosition().x / BLOCK_SIZE) + ", " + (getPlayer().getPosition().y / BLOCK_SIZE) + ").");
 		}
@@ -324,7 +324,7 @@ public class World {
 			int blockY = getPlayer().getTrueLocation().y + 2;
 			if (((Block)terrainMap[blockX][blockY - 1]).getCollision() == Block.BlockCollision.None) {
 				getPlayer().setJump(true);
-				getPlayer().translate(0, -10);
+				getPlayer().translate(0, -40);
 				iterations++;
 			}else{
 				if (getPlayer().getTrueLocation().x / BLOCK_SIZE < 1) {

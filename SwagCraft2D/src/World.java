@@ -1,13 +1,15 @@
-import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Random;
 import javax.swing.Timer;
 
 public class World {
+	//Enumerations
+	enum Time {Sunrise, Sunset, Night, Day, Rain}
 	//Compiler Conditions
+	private int TIME_PER_DAY = 864000;
 	private int BLOCK_SIZE;
-	private int WORLD_SIZE_X = 500;
+	private int WORLD_SIZE_X = 1000;
 	private int WORLD_SIZE_Y = 128;
 	private int WORLD_MAX_STRUCTURES = 10;
 	private final int TICK_SPEED = 10;
@@ -15,6 +17,7 @@ public class World {
 	private final int TICK_BLOCK_ITERATIONS = 2;
 	//World Variables
 	private BaseEntity[][] terrainMap;
+	private double[][] lightMap;
 	private int[] biomeKeys;
 	private WorldDrop[] terrainDrops;
 	private int numDrops;
@@ -26,16 +29,98 @@ public class World {
 	private int worldStructures = 0;
 	private int iterations = 0;
 	private int ticks = 0;
+	private Time gameTime = Time.Sunrise;
+	private double worldLight = 0;
+	private double timeScope = 0;
+	private int time = 0;
+	private int dayClock = 0;
 
 	public World(int blockSize) {
 		BLOCK_SIZE = blockSize;
 		terrainMap = new BaseEntity[WORLD_SIZE_X][WORLD_SIZE_Y];
-		terrainDrops = new WorldDrop[1000];
+		lightMap = new double[WORLD_SIZE_X][WORLD_SIZE_Y];
+		for (int x = 0; x < lightMap.length; x++) {
+			for (int y = 0; y < lightMap[y].length; y++) {
+				lightMap[x][y] = 0.5;
+			}
+		}
+		terrainDrops = new WorldDrop[10000];
 		numDrops = 0;
 		worldPhysics = new WorldPhysics();
 		worldPhysicsTimer = new Timer(TICK_SPEED, worldPhysics);
 		generate();
 		worldPhysicsTimer.start();
+	}
+
+	public double getWorldLight() {
+		return worldLight;
+	}
+
+	public double getLightValue(int x, int y) {
+		if (x > 0 && x < WORLD_SIZE_X) {
+			if (y > 0 && y < WORLD_SIZE_Y) {
+				double a = lightMap[x][y];
+				if (a > 1) {
+					a = 1;
+				}else if (a < 0) {
+					a = 0;
+				}
+				return a;
+			}
+		}
+		return 0;
+	}
+
+	public void increaseGlobalLight(double a) {
+		for (int x = 0; x < lightMap.length; x++) {
+			for (int y = 0; y < lightMap[y].length; y++) {
+				lightMap[x][y] += a;
+			}
+		}
+	}
+
+	public void decreaseGlobalLight(double a) {
+		for (int x = 0; x < lightMap.length; x++) {
+			for (int y = 0; y < lightMap[y].length; y++) {
+				lightMap[x][y] -= a;
+			}
+		}
+	}
+
+	public void setGlobalLight(double a) {
+		if(a < 0.8) {
+			for (int x = 0; x < lightMap.length; x++) {
+				for (int y = 0; y < lightMap[y].length; y++) {
+					lightMap[x][y] = a;
+				}
+			}
+		}
+	}
+
+	public void addLightObject(int a, int b, double value) {
+		int radius = (int)value * 4;
+		for (int x = a - radius; x <= a + radius; x++) {
+			for (int y = b - radius; y <= b + radius; y++) {
+				double calculatedValue = Math.sqrt(Math.pow((x - a)-a, 2) + Math.pow((y-b)-b, 2));
+				try {
+					lightMap[x][y] = calculatedValue;
+				}catch (Exception e) {
+
+				}
+			}
+		}
+	}
+
+	public int getMaxTime() {
+		return TIME_PER_DAY;
+	}
+
+	public int getTime() {
+		return (int)time;
+	}
+
+	public double[][] getLightMap() {
+		return lightMap;
 	}
 
 	public void setBlockSize(int i) {
@@ -88,10 +173,11 @@ public class World {
 				targetHeight -= new Random().nextDouble() * 2;
 			}
 			for (int y = targetHeight; y < WORLD_SIZE_Y; y++) {
+				int height = new Random().nextInt(2) + 2;
 				if (terrainMap[x][y] == null || ((Block)terrainMap[x][y]).getType() == Block.BlockType.Air) {
 					if (y == targetHeight) {
 						spawnBlock(Block.BlockType.Grass, x, y);
-					}else if (y < targetHeight + (new Random().nextInt(2) + 2)) {
+					}else if (y < targetHeight + (new Random().nextInt(height) + 4)) {
 						spawnBlock(Block.BlockType.Dirt, x, y);
 					}else if (y > targetHeight) {
 						spawnBlock(Block.BlockType.Stone, x, y);
@@ -111,19 +197,24 @@ public class World {
 		}
 		if (player == null) {
 			System.out.println("Converting 'null' player to Player!");
-			player = new Player(new Position((int)(WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
+			player = new Player(new Position((WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
 			player.convertCoords(BLOCK_SIZE);
 			System.out.println("Player Spawned: (" + getPlayer().getPosition().x + ", " + getPlayer().getPosition().y + "). Approximate: (" + (getPlayer().getPosition().x / BLOCK_SIZE) + ", " + (getPlayer().getPosition().y / BLOCK_SIZE) + ").");
 		}
 	}
 
 	public void spawnDrop(int x, int y, Block.BlockType b) {
-		terrainDrops[numDrops] = new WorldDrop(x, y, b);
+		terrainDrops[numDrops] = new WorldDrop(x * BLOCK_SIZE, y * BLOCK_SIZE, b);
 		numDrops++;
+		//System.out.println("Added drop at (" + x + ", " + y + ").");
 	}
 
 	public String get(int x, int y) {
-		return (((Block)terrainMap[x][y]).getType().toString() + " (" + x + ", " + y + ")").replace('_', ' ');
+		try {
+			return (((Block)terrainMap[x][y]).getType().toString() + " (" + x + ", " + y + ")").replace('_', ' ');
+		}catch (Exception e) {
+			return "Unknown Block (?, ?)";
+		}
 	}
 
 	public void generateGameObjects() {
@@ -180,8 +271,20 @@ public class World {
 	}
 
 	public void destroyBlock(int x, int y) {
-		spawnBlock(Block.BlockType.Air, x, y);
-
+		if (!testType(x, y, Block.BlockType.Air)) {
+			if (((Block)terrainMap[x][y]).getType() == Block.BlockType.Stone) {
+				spawnDrop(x, y, Block.BlockType.Cobblestone);
+				spawnBlock(Block.BlockType.Air, x, y);
+			}else if (((Block)terrainMap[x][y]).getType() == Block.BlockType.Bedrock) {
+				//Unbreakable
+			}else if (((Block)terrainMap[x][y]).getType() == Block.BlockType.Grass) {
+				spawnDrop(x, y, Block.BlockType.Dirt);
+				spawnBlock(Block.BlockType.Air, x, y);
+			}else{
+				spawnDrop(x, y, ((Block)terrainMap[x][y]).getType());
+				spawnBlock(Block.BlockType.Air, x, y);
+			}	
+		}
 	}
 
 	public int getIterations() {
@@ -197,9 +300,11 @@ public class World {
 		return r.nextInt(100);
 	}
 
-	public double getFromSine(double amp, int x) {
-		//y=a*sin(kx)
-		return (int)(amp*Math.sin(2*x));
+	public double getFromSine(double amp, double x, int offset) {
+		double pi_over_180 = 3.141592654/180;
+		double radian = x*pi_over_180;
+		double sine = Math.sin(radian) + offset;
+		return sine;
 	}
 
 	public void setPhysicsMode(boolean enabled) {
@@ -259,7 +364,15 @@ public class World {
 		iterations++;
 	}
 
+	public void interpretTime() {
+		time = (int) (getFromSine(0.5, timeScope, 1) * 100);
+		worldLight = getFromSine(1, timeScope, 0);
+		setGlobalLight(worldLight);
+		timeScope-=0.05;
+	}
+
 	public void physicsTick() {
+		interpretTime();
 		if (physicsEnabled) {
 			//Block Iterations
 			if (blockIterations < TICK_BLOCK_ITERATIONS) {
@@ -319,20 +432,90 @@ public class World {
 				}
 				blockIterations = 0;
 			}
+			getPlayer().convertCoords(BLOCK_SIZE);
 			//Player Iterations
-			int blockX = getPlayer().getTrueLocation().x - 1;
-			int blockY = getPlayer().getTrueLocation().y + 2;
-			if (((Block)terrainMap[blockX][blockY - 1]).getCollision() == Block.BlockCollision.None) {
-				getPlayer().setJump(true);
-				getPlayer().translate(0, -40);
-				iterations++;
+			int blockX = getPlayer().getTrueLocation().x;
+			int blockY = getPlayer().getTrueLocation().y;
+			if (getPlayer().isJumpApex || !getPlayer().isJumping) {
+				if (((Block)terrainMap[blockX][blockY - 1]).getCollision() == Block.BlockCollision.None) {
+					getPlayer().fall(10);
+					iterations++;
+				}else{
+					if (blockX / BLOCK_SIZE < 1) {
+						getPlayer().fall(1);
+					}
+					getPlayer().setCanJump(true);
+					getPlayer().isJumpApex = false;
+					getPlayer().jumpHeight = 0;
+					iterations++;
+				}
+			}
+			getPlayer().facing++;
+			if(getPlayer().facing > 80) {
+				getPlayer().setDirection(0);
+			}
+			getPlayer().setMoveLeft(true);
+			if (((Block)terrainMap[blockX - 1][blockY - 2]).getCollision() == Block.BlockCollision.Solid) {
+				getPlayer().setMoveLeft(false);	
+			}
+			if (((Block)terrainMap[blockX - 1][blockY - 3]).getCollision() == Block.BlockCollision.Solid) {
+				getPlayer().setMoveLeft(false);
+			}
+			getPlayer().setMoveRight(true);
+			if (((Block)terrainMap[blockX + 1][blockY - 2]).getCollision() == Block.BlockCollision.Solid) {
+				getPlayer().setMoveRight(false);	
+			}
+			if (((Block)terrainMap[blockX + 1][blockY - 3]).getCollision() == Block.BlockCollision.Solid) {
+				getPlayer().setMoveRight(false);
+			}
+			if (((Block)terrainMap[blockX][blockY - 4]).getCollision() == Block.BlockCollision.Solid) {
+				getPlayer().setCanJump(false);
 			}else{
-				if (getPlayer().getTrueLocation().x / BLOCK_SIZE < 1) {
-					getPlayer().translate(0, -0.1);
+				getPlayer().setCanJump(true);
+			}
+			if (getPlayer().canJump()) {
+				if (getPlayer().fallDistance > 0) {
+					if (getPlayer().fallDistance / BLOCK_SIZE > 2) {
+						getPlayer().takeDamage(0.5 * (getPlayer().fallDistance / BLOCK_SIZE) / 2);
+						getPlayer().fallDistance = 0;
+					}
+				}
+			}
+			if (getPlayer().distanceMoved > 500) {
+				getPlayer().takeHunger(0.5);
+				getPlayer().distanceMoved = 0;
+			}
+			blockX = getPlayer().getTrueLocation().x;
+			blockY = getPlayer().getTrueLocation().y;
+			//Drop Iterations
+			int increment = 0;
+			for (WorldDrop d : terrainDrops) {
+				if (d != null) {
+					int realX = (d.getX() / BLOCK_SIZE);
+					int realY = (d.getY() / BLOCK_SIZE);
+					boolean pickup = false;
+					//System.out.println("Player: " + blockX + ", " + blockY + " and drop at " + realX + ", " + realY);
+					if (blockX < realX + 2 && blockX > realX - 2) {
+						if (blockY < realY + 3 && blockY > realY - 3) {
+							if (getPlayer().itemPickup(d)) {
+								terrainDrops[increment] = null;
+								pickup = true;
+							}
+						}
+					}
+					if (!pickup) {
+						if (((Block)terrainMap[realX][realY + 1]).getCollision() == Block.BlockCollision.None) {
+							d.fall(10);
+						}else{
+							if (((Block)terrainMap[realX][realY]).getCollision() == Block.BlockCollision.Solid) {
+								d.rise(10);
+							}
+						}
+					}
+					increment++;
 				}
 			}
 		}
-		getPlayer().convertCoords(BLOCK_SIZE);
 	}
 
 	public boolean testType (int x, int y, Block.BlockType b) {

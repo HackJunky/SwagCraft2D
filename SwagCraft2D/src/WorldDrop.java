@@ -4,21 +4,44 @@ import java.io.IOException;
 
 public class WorldDrop extends BaseEntity{
 	private Block.BlockType dropType;
-	private double x;
-	private double y;
+	private int x;
+	private int y;
+	private int qty;
 	
-	public WorldDrop(double x, double y, Block.BlockType b) {
+	public WorldDrop(int x, int y, Block.BlockType b) {
 		this.x = x;
 		this.y = y;
 		dropType = b;
+		qty = 1;
+		//System.out.println("Created drop at (" + x + ", " + y + ")");
 	}
 
-	public double getX() {
+	public int getQTY() {
+		return qty;
+	}
+	
+	public void setQTY(int qty) {
+		this.qty = qty;
+	}
+	
+	public void addQTY(int i) {
+		qty+=i;
+	}
+	
+	public int getX() {
 		return x;
 	}
 	
-	public double getY() {
+	public int getY() {
 		return y;
+	}
+	
+	public void fall(int i) {
+		y+=i;
+	}
+	
+	public void rise(int i) {
+		y-=i;
 	}
 	
 	public Block.BlockType getType() {

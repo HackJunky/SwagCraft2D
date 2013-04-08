@@ -1,7 +1,7 @@
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -27,13 +27,12 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.File;
-
 import javax.swing.JFrame;
 import javax.swing.Timer;
 
 public class Frame extends JFrame{
 	private static final long serialVersionUID = -5151041547543472432L;
-	//Enumerations 
+	//Enumerations
 	enum UIState {
 		Game, Menu, Menu_Singleplayer, Menu_Multiplayer
 	}
@@ -52,7 +51,8 @@ public class Frame extends JFrame{
 	int HUNGER_TILE_SIZE = 20;
 	int XP_WIDTH = 0;
 	int XP_HEIGHT = 0;
-	int DROP_SIZE = BLOCK_SIZE / 3;
+	int DROP_SIZE = BLOCK_SIZE / 2;
+	int BREAK_RADIUS = 4;
 	//Game Elements
 	private UIState thisUIState;
 	private World gameWorld;
@@ -86,11 +86,22 @@ public class Frame extends JFrame{
 	private int hungerStartX = 0;
 	private int hungerStartY = 0;
 	private int hungerGap = 3;
+
+	private float worldLight = 0;
+	private String dayStatus = "Calculating...";
+
+	String EOL = System.getProperty("line.separator");  
+
+	private int loaded = 0;
+	private boolean showDebug = false;
+	private String debug = "SwagCraft Version " + version + " Debugger" + EOL;
+
 	//Cursor Vars
 	private Point mouseLoc = new Point(0, 0);
-	
+	private boolean isInRange = false;
+
 	public Frame() {
-		setUndecorated(true);
+		this.setUndecorated(true);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		this.setBounds(0, 0, screenSize.width, screenSize.height);
 		this.setSize(new Dimension(screenSize.width, screenSize.height));
@@ -100,6 +111,8 @@ public class Frame extends JFrame{
 		while ((this.getSize().width / BLOCK_SIZE) > TARGET_X) {
 			BLOCK_SIZE++;
 		}
+		DROP_SIZE = BLOCK_SIZE / 2;
+		System.out.println("Tile Size Reticulation: Tiles are now sized at " + BLOCK_SIZE + " px.");
 		try {
 			GraphicsEnvironment e = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			e.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("data/MCFont.ttf")));
@@ -120,7 +133,48 @@ public class Frame extends JFrame{
 		gameListener.enableMouseListening(true);
 		System.out.println("SwagCraft " + version + " successfully initialized!");
 	}
-	
+
+	public void doDebug() {
+		getDayStatus();
+		debug += "SwagCraft Version " + version + " Debugger" + EOL;
+		debug += EOL;
+		debug += "Physics Data" + EOL;
+		debug += "-Physics Iterations: " + gameWorld.getIterations() + EOL;
+		debug += "-Blocks Loaded: " + loaded + EOL;
+		debug += EOL;
+		debug += "Render Data" + EOL;
+		debug += "-Viewport: (" + viewStartX + " ," + viewStartY + ") to (" + viewX + ", " + viewY + ")" + EOL;
+		debug += "-Player Location: (" + gameWorld.getPlayer().getTrueLocation().x + ", " + (gameWorld.getPlayer().getTrueLocation().y - 3) + ")" + EOL;
+		debug += "-Tile Draw Size: " + BLOCK_SIZE + EOL;
+		debug += "-Sync Rate: 60 FPS, Double Buffer" + EOL;
+		debug += EOL;
+		debug += "Light Data" + EOL;
+		debug += "-Day Cycle: " + dayStatus + EOL;
+		debug += "-Cycle Time: " + gameWorld.getTime() + EOL;
+		debug += "-Unique Light Iterations: UNIMPLEMENTED" + EOL;
+		debug += "-Globally Cast Light Value: " + (1 - worldLight) + EOL;
+		debug += EOL;
+		debug += "World Build Information" + EOL;
+		debug += "-World Size: (" + gameWorld.getSizeX() + ", " + gameWorld.getSizeY() + ")" + EOL;
+	}
+
+	public void flushDebug() {
+		debug = "";
+	}
+
+	public void getDayStatus() {
+		worldLight = (float)gameWorld.getWorldLight();
+		if (worldLight < 0.2) {
+			dayStatus = "Day";
+		}else if (worldLight < 0.4) {
+			dayStatus = "Sunrise";
+		}else if (worldLight < 0.6) {
+			dayStatus = "Sunset";
+		}else if (worldLight <= 1) {
+			dayStatus = "Night";
+		}
+	}
+
 	public void draw() {
 		BufferStrategy bf = this.getBufferStrategy();
 		Graphics g = null;
@@ -128,6 +182,8 @@ public class Frame extends JFrame{
 			g = bf.getDrawGraphics();
 			Graphics2D g2d = (Graphics2D) g;
 			FontMetrics fm = g.getFontMetrics();
+			Composite def = g2d.getComposite();
+			loaded = 0;
 			g2d.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
 			if (thisUIState == UIState.Menu) {
 				g2d.drawImage(Toolkit.getDefaultToolkit().getImage("data/UI/Background.png"), 0, 0, this.getSize().width, this.getSize().height, this);
@@ -144,6 +200,7 @@ public class Frame extends JFrame{
 							g2d.drawImage(bgImage, (x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, this);
 						}
 					}
+
 					//Paint Blocks
 					BaseEntity[][] map = gameWorld.getTerrain();
 					for (int x = viewStartX; x < viewX; x++) {
@@ -153,6 +210,16 @@ public class Frame extends JFrame{
 								Image tile = ((Block)map[x][y]).getImage();
 								BufferedImage img = ImageTool.toBufferedImage(tile);
 								g2d.drawImage(tile, (x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, this);
+								float a = (float)gameWorld.getLightValue(x, y);
+								g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, a));
+								g2d.fillRect((x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+								g2d.setComposite(def);
+								loaded++;
+								if (isInRange && x == trueX && y == trueY) {
+									Image highlight = Toolkit.getDefaultToolkit().getImage("data/UI/Highlight.png");
+									//g2d.drawImage(highlight, (x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, this);
+									g2d.drawRect((x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+								}
 							}catch (Exception e) {
 								//System.out.println("CRITICAL ERROR - MAP NOT READY. (You should not be seeing this)");
 							}
@@ -162,13 +229,12 @@ public class Frame extends JFrame{
 					Position playerLoc = gameWorld.getPlayer().getPosition();
 					Point playerPoint = gameWorld.getPlayer().getTrueLocation();
 					Image playerImage = gameWorld.getPlayer().getImage();
-					int drawX = (int)(playerLoc.x / BLOCK_SIZE) + 1;
-					int drawY = (int)(playerLoc.y / BLOCK_SIZE) + 1;
+					int drawX = (int)(playerLoc.x - (viewStartX * BLOCK_SIZE));
+					int drawY = (int)(playerLoc.y - (viewStartY * BLOCK_SIZE));
 					g2d.drawImage(playerImage, drawX, drawY, BLOCK_SIZE, 2 * BLOCK_SIZE, this);
-					//System.out.println("Drawing player at: (" + drawX + ", " + drawY + ") within the bounds of (" + viewStartX + ", " + viewStartY + ") to (" + viewX + ", " + viewY + ").");
 
 					//Paint Player Tooltip
-					String pTooltip = "Player (" + drawX + ", " + drawY + ")";
+					String pTooltip = "Player (" + (playerLoc.x / BLOCK_SIZE) + ", " + (playerLoc.y / BLOCK_SIZE) + ")";
 					g2d.setColor(Color.BLACK);
 					if (drawX > 0 && drawY > 0) {
 						g2d.drawString(pTooltip, drawX - (fm.stringWidth(pTooltip) / 2), drawY - fm.getAscent());
@@ -176,12 +242,20 @@ public class Frame extends JFrame{
 					g2d.setColor(Color.black);
 
 					//Paint Drops
-					//				for (WorldDrop d : gameWorld.getTerrainDrops()) {
-					//					BufferedImage tileImage = ImageTool.toBufferedImage(d.getImage());
-					//					g2d.drawImage(tileImage, (int)d.getX() * BLOCK_SIZE * (DROP_SIZE / 2), (int)d.getY() * BLOCK_SIZE * (DROP_SIZE / 2), DROP_SIZE, DROP_SIZE, this);
-					//				}
+					for (WorldDrop d : gameWorld.getTerrainDrops()) {
+						if (d != null) {					
+							int x = (d.getX() - (viewStartX * BLOCK_SIZE)) + (DROP_SIZE / 2);
+							int y = (d.getY() - (viewStartY * BLOCK_SIZE)) + (DROP_SIZE);
+							g2d.drawImage(d.getImage(), x, y, DROP_SIZE, DROP_SIZE, this);
+							float a = (float)gameWorld.getLightValue((d.getX() / BLOCK_SIZE) - viewStartX, (d.getY() / BLOCK_SIZE) - viewStartY);
+							g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, a));
+							g2d.fillRect(x, y, DROP_SIZE, DROP_SIZE);
+							g2d.setComposite(def);
+						}
+					}
 
 					//Paint Alpha
+
 
 					//Paint Tooltip
 					String tooltip = gameWorld.get(trueX, trueY);
@@ -195,19 +269,40 @@ public class Frame extends JFrame{
 					for (int i = 1; i <= HOTBAR_TILE_QTY; i++) {
 						int Gi = i; //graphics offset
 						try { 
+							boolean isSelected = false;
 							if (gameWorld.getPlayer() != null) {
 								if (gameWorld.getPlayer().getSelectedSpace() == i) {
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Selected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE) - HOTBAR_TILE_OFFSET, this.getSize().height - HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, this);
+									isSelected = true;
 								}else {
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
 								}
-								if (gameWorld.getPlayer().getHotbar()[i - 1] != null) {
+								try {
 									Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
 									BufferedImage aTile = ImageTool.toBufferedImage(eTile);
-									g2d.drawImage(aTile, (hotbarStartX + (Gi * HOTBAR_TILE_SIZE)) + HOTBAR_TILE_OFFSET, (this.getSize().height - HOTBAR_TILE_SIZE) + HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, this);
+									int x = hotbarStartX + (Gi * HOTBAR_TILE_SIZE);
+									int y = this.getSize().height - HOTBAR_TILE_SIZE - 2;
+									g2d.setColor(Color.WHITE);
+									if (isSelected) {
+										g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, this);
+										String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
+										g2d.drawString(t, x + (HOTBAR_TILE_SIZE / 2) - (fm.stringWidth(t)), y + (HOTBAR_TILE_SIZE / 2) + (fm.getAscent() / 2));
+									}else{
+										g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), this);
+										String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
+										g2d.drawString(t, x + (HOTBAR_TILE_SIZE / 2) - (fm.stringWidth(t)), y + (HOTBAR_TILE_SIZE / 2) + (fm.getAscent() / 2));
+									}
+									g2d.setColor(Color.BLACK);
+								}catch (Exception e) {
+									//Try to Draw the Tile
 								}
+								//								if (gameWorld.getPlayer().getHotbar()[i - 1] != null) {
+								//									Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
+								//									BufferedImage aTile = ImageTool.toBufferedImage(eTile);
+								//									g2d.drawImage(aTile, (hotbarStartX + (Gi * HOTBAR_TILE_SIZE)) + HOTBAR_TILE_OFFSET, (this.getSize().height - HOTBAR_TILE_SIZE) + HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, this);
+								//								}
 							}else{
 								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
@@ -360,6 +455,18 @@ public class Frame extends JFrame{
 					HEALTH_QTY = gameWorld.getPlayer().PLAYER_MAX_HEALTH;
 				}
 			}
+			if (showDebug) {
+				doDebug();
+				g2d.setColor(Color.WHITE);
+				int y = 30;
+				String so; 
+				for (String s : debug.split(System.getProperty("line.separator"))) {
+					g2d.drawString(s, 10, y);
+					y+=20;
+				}
+				g2d.setColor(Color.BLACK);
+				flushDebug();
+			}
 			g.dispose();
 		}catch (Exception e) {
 			e.printStackTrace();
@@ -410,15 +517,20 @@ public class Frame extends JFrame{
 	}
 
 	public void calculateViewport() {
-//		if (gameWorld.getPlayer().getTrueLocation().x < viewStartX || gameWorld.getPlayer().getTrueLocation().x > viewX) {
-//			if (gameWorld.getPlayer().getTrueLocation().y < viewStartY || gameWorld.getPlayer().getTrueLocation().y > viewY) {
-				viewStartX = gameWorld.getPlayer().getTrueLocation().x - ((this.getWidth() / BLOCK_SIZE) / 4);
-				viewStartY = gameWorld.getPlayer().getTrueLocation().y - ((this.getHeight() / BLOCK_SIZE) / 4);
-				viewX = viewStartX + (this.getSize().width / BLOCK_SIZE) + 3;
-				viewY = viewStartY + (this.getSize().height / BLOCK_SIZE) + 3;
-				//System.out.println("Calculated Viewport: (" + viewStartX + " - " + (viewX) + ", " + viewStartY + " - " + viewY + ").");
-//			}
-//		}
+		boolean recalculate = false;
+		if (gameWorld.getPlayer().getTrueLocation().x < viewStartX + 5 || gameWorld.getPlayer().getTrueLocation().x > viewX - 5) {
+			recalculate = true;
+		}
+		if (gameWorld.getPlayer().getTrueLocation().y < viewStartY + 5 || gameWorld.getPlayer().getTrueLocation().y > viewY - 5) {
+			recalculate = true;
+		}
+		if (recalculate) {
+			viewStartX = gameWorld.getPlayer().getTrueLocation().x - ((this.getWidth() / BLOCK_SIZE) / 2);
+			viewStartY = gameWorld.getPlayer().getTrueLocation().y - ((this.getHeight() / BLOCK_SIZE) / 2);
+			viewX = viewStartX + (this.getSize().width / BLOCK_SIZE) + 3;
+			viewY = viewStartY + (this.getSize().height / BLOCK_SIZE) + 3;
+			System.out.println("Viewport Calculated: (" + viewStartX + " - " + (viewX) + ", " + viewStartY + " - " + viewY + ").");
+		}
 		getTrueCoords();
 	}
 
@@ -450,16 +562,18 @@ public class Frame extends JFrame{
 	}
 
 	public class GameListener implements ActionListener, KeyListener, MouseListener, ComponentListener, MouseMotionListener {
-		private final int PLACE_SPACING = 5;
-
+		private final int PLACE_SPACING = 2; //Set to 0 to Disable
+		private final int BREAK_SPACING = 1; //Set to 0 to Disable
 		private boolean keyEnabled = false;
 		private boolean mouseEnabled = false;
 		private boolean isJump = false;
-		private boolean mouseDown = false;
+		private boolean rightMouseDown = false;
+		private boolean leftMouseDown = false;
 		private int lastPlace = 0;
+		private int lastBreak = 0;
 		private boolean moveLeft = false;
 		private boolean moveRight = false;
-		
+
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (gameWorld != null) {
@@ -473,13 +587,26 @@ public class Frame extends JFrame{
 				calculateXPBarStart();
 				calculateHungerStart();
 				setTitle();
-				isJump = false;
-				if (mouseDown) {
+				isInRange = false;
+				if(trueX < gameWorld.getPlayer().getTrueLocation().x + BREAK_RADIUS && trueX > gameWorld.getPlayer().getTrueLocation().x - BREAK_RADIUS) {
+					if(trueY < gameWorld.getPlayer().getTrueLocation().y + BREAK_RADIUS - 2 && trueY > gameWorld.getPlayer().getTrueLocation().y - BREAK_RADIUS - 3) {
+						isInRange = true;
+					}
+				}
+				if (rightMouseDown && isInRange) {
 					lastPlace++;
 					if (lastPlace == PLACE_SPACING) {
 						gameWorld.spawnBlock(Block.BlockType.Sand, trueX, trueY);
 						lastPlace = 0;
 					}
+				}
+				if (leftMouseDown && isInRange) {
+					lastBreak++;
+					if (lastBreak == BREAK_SPACING) {
+						gameWorld.destroyBlock(trueX, trueY);
+						lastBreak = 0;
+					}
+
 				}
 				if (moveLeft) {
 					gameWorld.getPlayer().moveLeft(10);
@@ -487,13 +614,16 @@ public class Frame extends JFrame{
 				if (moveRight) {
 					gameWorld.getPlayer().moveRight(10);
 				}
+				if (isJump && gameWorld.getPlayer().canJump()) {
+					gameWorld.getPlayer().jump(10);
+				}
 			}
 			draw();
 		}
 
 		@Override
 		public void componentResized(ComponentEvent arg0) {
-			
+
 		}
 
 		@Override
@@ -523,6 +653,7 @@ public class Frame extends JFrame{
 		public void keyPressed(KeyEvent e) {
 			if (keyEnabled) {
 				if (e.getKeyChar() == ' ') {
+					gameWorld.getPlayer().isJumpApex = false;
 					isJump = true;
 				}
 				if (e.getKeyChar() == 'a') {
@@ -531,6 +662,9 @@ public class Frame extends JFrame{
 				if (e.getKeyChar() == 'd') {
 					moveRight = true;
 				}
+				if (e.getKeyCode() == e.VK_F3) {
+					showDebug = !showDebug;
+				}
 			}
 		}
 
@@ -538,6 +672,7 @@ public class Frame extends JFrame{
 		public void keyReleased(KeyEvent e) {
 			if (keyEnabled) {
 				if (e.getKeyChar() == ' ') {
+					gameWorld.getPlayer().isJumpApex = true;
 					isJump = false;
 				}
 				if (e.getKeyChar() == 'a') {
@@ -555,39 +690,30 @@ public class Frame extends JFrame{
 				if (gameWorld != null) {
 					if (e.getKeyChar() == '1') {
 						gameWorld.getPlayer().selectSpace(1);
-						System.out.println("Selecting Space One.");
 					}
 					if (e.getKeyChar() == '2') {
 						gameWorld.getPlayer().selectSpace(2);
-						System.out.println("Selecting Space Two.");
 					}
 					if (e.getKeyChar() == '3') {
 						gameWorld.getPlayer().selectSpace(3);
-						System.out.println("Selecting Space Three.");
 					}
 					if (e.getKeyChar() == '4') {
 						gameWorld.getPlayer().selectSpace(4);
-						System.out.println("Selecting Space Four.");
 					}
 					if (e.getKeyChar() == '5') {
 						gameWorld.getPlayer().selectSpace(5);
-						System.out.println("Selecting Space Five.");
 					}
 					if (e.getKeyChar() == '6') {
 						gameWorld.getPlayer().selectSpace(6);
-						System.out.println("Selecting Space Six.");
 					}
 					if (e.getKeyChar() == '7') {
 						gameWorld.getPlayer().selectSpace(7);
-						System.out.println("Selecting Space Seven.");
 					}
 					if (e.getKeyChar() == '8') {
 						gameWorld.getPlayer().selectSpace(8);
-						System.out.println("Selecting Space Eight.");
 					}
 					if (e.getKeyChar() == '9') {
 						gameWorld.getPlayer().selectSpace(9);
-						System.out.println("Selecting Space Nine.");
 					}
 				}
 			}
@@ -618,9 +744,9 @@ public class Frame extends JFrame{
 		public void mousePressed(MouseEvent e) {
 			if (mouseEnabled) {
 				if (e.getButton() == MouseEvent.BUTTON3) {
-					mouseDown = true;
+					rightMouseDown = true;
 				}else if (e.getButton() == MouseEvent.BUTTON1) {
-					gameWorld.destroyBlock(trueX, trueY);
+					leftMouseDown = true;
 				}
 			}
 		}
@@ -629,7 +755,9 @@ public class Frame extends JFrame{
 		public void mouseReleased(MouseEvent e) {
 			if (mouseEnabled) {
 				if (e.getButton() == MouseEvent.BUTTON3) {
-					mouseDown = false;
+					rightMouseDown = false;
+				}else if (e.getButton() == MouseEvent.BUTTON1) {
+					leftMouseDown = false;
 				}
 			}
 		}
@@ -645,3 +773,4 @@ public class Frame extends JFrame{
 		}
 	}
 }
+

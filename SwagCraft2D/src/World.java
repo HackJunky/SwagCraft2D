@@ -371,6 +371,39 @@ public class World {
 		timeScope-=0.05;
 	}
 
+	public void destroyDropByInstance(WorldDrop d) {
+		int increment = 0;
+		for (WorldDrop a : terrainDrops) {
+			if (d.equals(a)) {
+				terrainDrops[increment] = null;
+			}
+			increment++;
+		}
+	}
+
+	public void destroyDropByCoords(int x, int y) {
+		int increment = 0;
+		for (WorldDrop a: terrainDrops) {
+			try {
+				int mx = a.getX() / BLOCK_SIZE;
+				int my = a.getY() / BLOCK_SIZE;
+				if (x == mx) {
+					if (y == my) {
+						terrainDrops[increment] = null;
+					}
+				}
+			}catch (Exception e) {
+
+			}
+			increment++;
+		}
+	}
+
+	public void destroyDropByIndex(int i) {
+		terrainDrops[i] = null;
+	}
+
+
 	public void physicsTick() {
 		interpretTime();
 		if (physicsEnabled) {
@@ -495,11 +528,11 @@ public class World {
 					int realY = (d.getY() / BLOCK_SIZE);
 					boolean pickup = false;
 					//System.out.println("Player: " + blockX + ", " + blockY + " and drop at " + realX + ", " + realY);
-					if (blockX < realX + 2 && blockX > realX - 2) {
+					if (blockX < realX + 1 && blockX > realX - 1) {
 						if (blockY < realY + 3 && blockY > realY - 3) {
 							if (getPlayer().itemPickup(d)) {
-								terrainDrops[increment] = null;
 								pickup = true;
+								destroyDropByCoords(realX, realY);
 							}
 						}
 					}

@@ -40,6 +40,7 @@ public class Frame extends JFrame{
 	static final double version = 1.0;
 	int TARGET_X = 40;
 	int BLOCK_SIZE = 21;
+	int HOTBAR_TOOLTIP_TIMEOUT = 100;
 	int HOTBAR_TILE_SIZE = 50;
 	int HOTBAR_TILE_OFFSET = 3;
 	int HOTBAR_TILE_QTY = 9;
@@ -69,6 +70,8 @@ public class Frame extends JFrame{
 	//Hotbar Drawing Vars
 	private int hotbarStartX = 0;
 	private int hotbarSize = 0;
+	private String hotbarSelected = "Empty";
+	private int hotbarTooltipTimeout = 0;
 	//Armor Drawing Vars
 	private int armorStartX = 0;
 	private int armorStartY = 0;
@@ -253,7 +256,7 @@ public class Frame extends JFrame{
 							g2d.setComposite(def);
 						}
 					}
-
+					
 					//Paint Alpha
 
 
@@ -275,9 +278,11 @@ public class Frame extends JFrame{
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Selected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE) - HOTBAR_TILE_OFFSET, this.getSize().height - HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, this);
 									isSelected = true;
+									hotbarSelected = gameWorld.getPlayer().getHotbar()[i].getType().toString().replace('_', ' ');
 								}else {
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
+									hotbarSelected = "Empty";
 								}
 								try {
 									Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
@@ -298,11 +303,6 @@ public class Frame extends JFrame{
 								}catch (Exception e) {
 									//Try to Draw the Tile
 								}
-								//								if (gameWorld.getPlayer().getHotbar()[i - 1] != null) {
-								//									Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
-								//									BufferedImage aTile = ImageTool.toBufferedImage(eTile);
-								//									g2d.drawImage(aTile, (hotbarStartX + (Gi * HOTBAR_TILE_SIZE)) + HOTBAR_TILE_OFFSET, (this.getSize().height - HOTBAR_TILE_SIZE) + HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET, this);
-								//								}
 							}else{
 								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
@@ -312,7 +312,11 @@ public class Frame extends JFrame{
 							//System.out.println("CRITICAL ERROR - MAP NOT READY. (You should not be seeing this)");
 						}
 					}
-
+					//Paint Hotbar Tooltip
+					if (hotbarTooltipTimeout > 0) {
+						g2d.drawString(hotbarSelected, (this.getSize().width / 2) - fm.stringWidth(hotbarSelected), armorStartY - 50);
+					}
+					
 					//Paint Hearts
 					try {
 						if (Math.round(gameWorld.getPlayer().getHealth()) == gameWorld.getPlayer().getHealth()) {
@@ -577,6 +581,7 @@ public class Frame extends JFrame{
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (gameWorld != null) {
+				hotbarTooltipTimeout--;
 				gameWorld.getPlayer().setJump(isJump);
 				Point p = MouseInfo.getPointerInfo().getLocation();
 				mouseLoc = p;
@@ -690,30 +695,39 @@ public class Frame extends JFrame{
 				if (gameWorld != null) {
 					if (e.getKeyChar() == '1') {
 						gameWorld.getPlayer().selectSpace(1);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '2') {
 						gameWorld.getPlayer().selectSpace(2);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '3') {
 						gameWorld.getPlayer().selectSpace(3);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '4') {
 						gameWorld.getPlayer().selectSpace(4);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '5') {
 						gameWorld.getPlayer().selectSpace(5);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '6') {
 						gameWorld.getPlayer().selectSpace(6);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '7') {
 						gameWorld.getPlayer().selectSpace(7);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '8') {
 						gameWorld.getPlayer().selectSpace(8);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 					if (e.getKeyChar() == '9') {
 						gameWorld.getPlayer().selectSpace(9);
+						hotbarTooltipTimeout = HOTBAR_TOOLTIP_TIMEOUT;
 					}
 				}
 			}

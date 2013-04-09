@@ -53,6 +53,9 @@ public class Singleplayer extends JPanel {
 		//Mode 1
 		createSurvival.addActionListener(new ButtonListener());
 		createCreative.addActionListener(new ButtonListener());
+		worldName.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
+		worldSizeX.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
+		worldSizeY.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
 		clearStyle(createSurvival);
 		clearStyle(createCreative);
 		//Mode 2

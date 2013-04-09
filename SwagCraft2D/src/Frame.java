@@ -1,7 +1,9 @@
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -9,6 +11,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
+import java.awt.LayoutManager;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -37,6 +40,11 @@ public class Frame extends JFrame{
 		Game, Menu, Menu_Singleplayer, Menu_Multiplayer
 	}
 	//UI Components
+	Menu gameMenu;
+	Singleplayer singleMenu;
+	Multiplayer multiMenu;
+
+	//UI Data
 	static final double version = 1.0;
 	int TARGET_X = 40;
 	int BLOCK_SIZE = 21;
@@ -75,11 +83,9 @@ public class Frame extends JFrame{
 	//Armor Drawing Vars
 	private int armorStartX = 0;
 	private int armorStartY = 0;
-	private int armorGap = 3;
 	//Health Drawing Vars
 	private int healthStartX = 0;
 	private int healthStartY = 0;
-	private int healthGap = 3;
 	//XP Bar Vars
 	private int xpEmptyStartX = 0;
 	private int xpFullStartX = 0;
@@ -89,6 +95,12 @@ public class Frame extends JFrame{
 	private int hungerStartX = 0;
 	private int hungerStartY = 0;
 	private int hungerGap = 3;
+	//Inventory Drawing Vars
+	private int inventoryStartX = 0;
+	private int inventoryStartY = 0;
+	private int inventorySpanX = 0;
+	private int inventorySpanY = 0;
+	private boolean drawInventory = false;
 
 	private float worldLight = 0;
 	private String dayStatus = "Calculating...";
@@ -104,6 +116,8 @@ public class Frame extends JFrame{
 	private boolean isInRange = false;
 
 	public Frame() {
+		this.setLayout(null);
+		System.out.println("Now Loading SwagCraft2D...");
 		this.setUndecorated(true);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		this.setBounds(0, 0, screenSize.width, screenSize.height);
@@ -115,7 +129,6 @@ public class Frame extends JFrame{
 			BLOCK_SIZE++;
 		}
 		DROP_SIZE = BLOCK_SIZE / 2;
-		System.out.println("Tile Size Reticulation: Tiles are now sized at " + BLOCK_SIZE + " px.");
 		try {
 			GraphicsEnvironment e = GraphicsEnvironment.getLocalGraphicsEnvironment();
 			e.registerFont(Font.createFont(Font.TRUETYPE_FONT, new File("data/MCFont.ttf")));
@@ -129,12 +142,15 @@ public class Frame extends JFrame{
 		this.setFocusable(true);
 		this.requestFocus();
 		this.createBufferStrategy(2);
-		thisUIState = UIState.Game;
+		thisUIState = UIState.Menu;
 		worldWatcher.start();
-		this.setVisible(true);
 		gameListener.enableKeyListening(true);
 		gameListener.enableMouseListening(true);
 		System.out.println("SwagCraft " + version + " successfully initialized!");
+		//System.out.println("Tile Size Reticulation: Tiles are now sized at " + BLOCK_SIZE + " px.");
+		validate();
+		repaint();
+		this.setVisible(true);
 	}
 
 	public void doDebug() {
@@ -188,13 +204,7 @@ public class Frame extends JFrame{
 			Composite def = g2d.getComposite();
 			loaded = 0;
 			g2d.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
-			if (thisUIState == UIState.Menu) {
-				g2d.drawImage(Toolkit.getDefaultToolkit().getImage("data/UI/Background.png"), 0, 0, this.getSize().width, this.getSize().height, this);
-			}else if (thisUIState == UIState.Menu_Singleplayer) {
-				g2d.drawImage(Toolkit.getDefaultToolkit().getImage("data/UI/Background Menu.png"), 0, 0, this.getSize().width, this.getSize().height, this);
-			}else if (thisUIState == UIState.Menu_Multiplayer) {
-				g2d.drawImage(Toolkit.getDefaultToolkit().getImage("data/UI/Background Menu.png"), 0, 0, this.getSize().width, this.getSize().height, this);
-			}else if (thisUIState == UIState.Game) {
+			if (thisUIState == UIState.Game) {
 				if (gameWorld != null) {
 					BufferedImage bgImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("textures/Air.png"));
 					//Draw a Background (for Translucent textures)
@@ -256,7 +266,7 @@ public class Frame extends JFrame{
 							g2d.setComposite(def);
 						}
 					}
-					
+
 					//Paint Alpha
 
 
@@ -271,6 +281,7 @@ public class Frame extends JFrame{
 					//Paint Hotbar
 					for (int i = 1; i <= HOTBAR_TILE_QTY; i++) {
 						int Gi = i; //graphics offset
+						int Ri = i - 1; //data offset
 						try { 
 							boolean isSelected = false;
 							if (gameWorld.getPlayer() != null) {
@@ -278,10 +289,13 @@ public class Frame extends JFrame{
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Selected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE) - HOTBAR_TILE_OFFSET, this.getSize().height - HOTBAR_TILE_SIZE - HOTBAR_TILE_OFFSET - 2, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, HOTBAR_TILE_SIZE + HOTBAR_TILE_OFFSET, this);
 									isSelected = true;
-									hotbarSelected = gameWorld.getPlayer().getHotbar()[i].getType().toString().replace('_', ' ');
 								}else {
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
+								}
+								if (gameWorld.getPlayer().getHotbar()[Ri] != null) {
+									hotbarSelected = gameWorld.getPlayer().getHotbar()[Ri].getType().toString().replace('_', ' ');
+								}else{
 									hotbarSelected = "Empty";
 								}
 								try {
@@ -289,20 +303,28 @@ public class Frame extends JFrame{
 									BufferedImage aTile = ImageTool.toBufferedImage(eTile);
 									int x = hotbarStartX + (Gi * HOTBAR_TILE_SIZE);
 									int y = this.getSize().height - HOTBAR_TILE_SIZE - 2;
-									g2d.setColor(Color.WHITE);
-									if (isSelected) {
-										g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, this);
-										String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
-										g2d.drawString(t, x + (HOTBAR_TILE_SIZE / 2) - (fm.stringWidth(t)), y + (HOTBAR_TILE_SIZE / 2) + (fm.getAscent() / 2));
-									}else{
-										g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), this);
-										String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
-										g2d.drawString(t, x + (HOTBAR_TILE_SIZE / 2) - (fm.stringWidth(t)), y + (HOTBAR_TILE_SIZE / 2) + (fm.getAscent() / 2));
+									for (int rep = 0; rep < 2; rep++) {
+										if (rep == 1) {
+											g2d.setColor(Color.WHITE);
+											g2d.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
+										}else{
+											g2d.setColor(Color.GRAY);
+											g2d.setFont(new Font("Minecraft Regular", Font.BOLD, 17));
+										}
+										if (isSelected) {
+											g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, this);
+											String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
+											g2d.drawString(t, x + (HOTBAR_TILE_SIZE - fm.stringWidth(t)) - 12, y + (HOTBAR_TILE_SIZE) - (fm.getAscent()) + 3);
+										}else{
+											g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4), this);
+											String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
+											g2d.drawString(t, x + (HOTBAR_TILE_SIZE - fm.stringWidth(t)) - 12, y + (HOTBAR_TILE_SIZE) - (fm.getAscent()) + 3);
+										}
 									}
-									g2d.setColor(Color.BLACK);
 								}catch (Exception e) {
 									//Try to Draw the Tile
 								}
+								g2d.setColor(Color.WHITE);
 							}else{
 								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 								g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
@@ -311,149 +333,164 @@ public class Frame extends JFrame{
 							e.printStackTrace();
 							//System.out.println("CRITICAL ERROR - MAP NOT READY. (You should not be seeing this)");
 						}
+						g2d.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
 					}
 					//Paint Hotbar Tooltip
 					if (hotbarTooltipTimeout > 0) {
 						g2d.drawString(hotbarSelected, (this.getSize().width / 2) - fm.stringWidth(hotbarSelected), armorStartY - 50);
 					}
-					
-					//Paint Hearts
-					try {
-						if (Math.round(gameWorld.getPlayer().getHealth()) == gameWorld.getPlayer().getHealth()) {
-							//No half hearts
-							int remainder = HEALTH_QTY;
-							for(int i = 0; i < gameWorld.getPlayer().getHealth() ; i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart.png"));
-								g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
-								remainder--;
-							}
-							if (remainder > 0) {
-								for(int i = HEALTH_QTY - remainder; i < HEALTH_QTY ; i++) {
-									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Empty.png"));
+
+					if (gameWorld.getPlayer().getSurvival()) {
+						//Paint Hearts
+						try {
+							if (Math.round(gameWorld.getPlayer().getHealth()) == gameWorld.getPlayer().getHealth()) {
+								//No half hearts
+								int remainder = HEALTH_QTY;
+								for(int i = 0; i < gameWorld.getPlayer().getHealth() ; i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart.png"));
 									g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
 									remainder--;
 								}
-							}
-						}else{
-							int remainder = HEALTH_QTY;
-							for(int i = 0; i < gameWorld.getPlayer().getHealth() - 1; i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart.png"));
-								g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
-								remainder--;
-							}
-							boolean first = false;
-							if (remainder > 0) {
-								for(int i = HEALTH_QTY - remainder; i < HEALTH_QTY; i++) {
-									if (!first) {
-										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Half.png"));
+								if (remainder > 0) {
+									for(int i = HEALTH_QTY - remainder; i < HEALTH_QTY ; i++) {
+										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Empty.png"));
 										g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
-										first = true; //Draw the half heart
-									}else{
-										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Empty.png"));	
-										g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
+										remainder--;
 									}
+								}
+							}else{
+								int remainder = HEALTH_QTY;
+								for(int i = 0; i < gameWorld.getPlayer().getHealth() - 1; i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart.png"));
+									g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
 									remainder--;
 								}
+								boolean first = false;
+								if (remainder > 0) {
+									for(int i = HEALTH_QTY - remainder; i < HEALTH_QTY; i++) {
+										if (!first) {
+											BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Half.png"));
+											g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
+											first = true; //Draw the half heart
+										}else{
+											BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Heart Empty.png"));	
+											g2d.drawImage(tileImage, healthStartX + (HEALTH_TILE_OFFSET + (HEALTH_TILE_SIZE * i)), healthStartY, HEALTH_TILE_SIZE, HEALTH_TILE_SIZE, this);
+										}
+										remainder--;
+									}
+								}
 							}
+
+						}catch (Exception e) {
+							e.printStackTrace();
 						}
 
-					}catch (Exception e) {
-						e.printStackTrace();
-					}
-
-					//Paint Hunger
-					try {
-						int max = gameWorld.getPlayer().getMaxHunger();
-						if (Math.round(gameWorld.getPlayer().getHunger()) == gameWorld.getPlayer().getHunger()) {
-							//No half hearts
-							int remainder = gameWorld.getPlayer().getMaxHunger();
-							for(int i = 0; i < gameWorld.getPlayer().getHunger() ; i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Full.png"));
-								g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
-								remainder--;
-							}
-							if (remainder > 0) {
-								for(int i = max - remainder; i < max ; i++) {
-									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Empty.png"));
+						//Paint Hunger
+						try {
+							int max = gameWorld.getPlayer().getMaxHunger();
+							if (Math.round(gameWorld.getPlayer().getHunger()) == gameWorld.getPlayer().getHunger()) {
+								//No half hearts
+								int remainder = gameWorld.getPlayer().getMaxHunger();
+								for(int i = 0; i < gameWorld.getPlayer().getHunger() ; i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Full.png"));
 									g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
 									remainder--;
 								}
-							}
-						}else{
-							int remainder = max;
-							for(int i = 0; i < gameWorld.getPlayer().getHunger() - 1; i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Full.png"));
-								g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
-								remainder--;
-							}
-							boolean first = false;
-							if (remainder > 0) {
-								for(int i = max - remainder; i < max; i++) {
-									if (!first) {
-										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Half.png"));
+								if (remainder > 0) {
+									for(int i = max - remainder; i < max ; i++) {
+										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Empty.png"));
 										g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
-										first = true; //Draw the half heart
-									}else{
-										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Empty.png"));	
-										g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
+										remainder--;
 									}
+								}
+							}else{
+								int remainder = max;
+								for(int i = 0; i < gameWorld.getPlayer().getHunger() - 1; i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Full.png"));
+									g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
 									remainder--;
 								}
+								boolean first = false;
+								if (remainder > 0) {
+									for(int i = max - remainder; i < max; i++) {
+										if (!first) {
+											BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Half.png"));
+											g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
+											first = true; //Draw the half heart
+										}else{
+											BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Hunger Empty.png"));	
+											g2d.drawImage(tileImage, hungerStartX + (hungerGap + (HUNGER_TILE_SIZE * i)), hungerStartY, HUNGER_TILE_SIZE, HUNGER_TILE_SIZE, this);
+										}
+										remainder--;
+									}
+								}
 							}
+
+						}catch (Exception e) {
+							e.printStackTrace();
 						}
 
-					}catch (Exception e) {
-						e.printStackTrace();
-					}
+						//Paint XP Bar Empty
+						BufferedImage emptyBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Empty.png"));
+						g2d.drawImage(emptyBarImage, xpEmptyStartX, xpBarY, XP_WIDTH, XP_HEIGHT, this);
 
-					//Paint XP Bar Empty
-					BufferedImage emptyBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Empty.png"));
-					g2d.drawImage(emptyBarImage, xpEmptyStartX, xpBarY, XP_WIDTH, XP_HEIGHT, this);
+						//Paint XP Bar Full
+						BufferedImage fullBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Full.png"));
+						g2d.drawImage(fullBarImage, xpFullStartX, xpBarY, ((int)xpFullEndX), XP_HEIGHT, this);
 
-					//Paint XP Bar Full
-					BufferedImage fullBarImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/XPBar Full.png"));
-					g2d.drawImage(fullBarImage, xpFullStartX, xpBarY, ((int)xpFullEndX), XP_HEIGHT, this);
+						//Paint XP Text
+						String xp = String.valueOf(gameWorld.getPlayer().getXP());
+						g2d.setColor(Color.GREEN);
+						g2d.drawString(xp, (xpEmptyStartX + (XP_WIDTH / 2)) - (fm.stringWidth(xp) / 2) - 2, xpBarY + 10);
 
-					//Paint XP Text
-					String xp = String.valueOf(gameWorld.getPlayer().getXP());
-					g2d.setColor(Color.GREEN);
-					g2d.drawString(xp, (xpEmptyStartX + (XP_WIDTH / 2)) - (fm.stringWidth(xp) / 2) - 2, xpBarY + 10);
-
-					//Paint Armor
-					try {
-						if (Math.round(gameWorld.getPlayer().getArmor()) == gameWorld.getPlayer().getArmor()) {
-							int remainder = (int)gameWorld.getPlayer().getMaxArmor();
-							for(int i = 0; i < gameWorld.getPlayer().getArmor(); i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor.png"));
-								g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
-								remainder--;
-							}
-							if (remainder > 0) {
-								for (int i = (int)gameWorld.getPlayer().getMaxArmor() - remainder; i < (int)gameWorld.getPlayer().getMaxArmor(); i++) {
-									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Empty.png"));
+						//Paint Armor
+						try {
+							if (Math.round(gameWorld.getPlayer().getArmor()) == gameWorld.getPlayer().getArmor()) {
+								int remainder = (int)gameWorld.getPlayer().getMaxArmor();
+								for(int i = 0; i < gameWorld.getPlayer().getArmor(); i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor.png"));
 									g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
 									remainder--;
 								}
-							}
-						}else{
-							int remainder = (int)gameWorld.getPlayer().getMaxArmor();
-							for (int i = 0; i < gameWorld.getPlayer().getArmor(); i++) {
-								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor.png"));
-								g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
-								remainder--;
-							}
-							if (remainder > 0) {
-								for (int i = (int)gameWorld.getPlayer().getMaxArmor() - remainder; i < (int)gameWorld.getPlayer().getMaxArmor(); i++) {
-									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Empty.png"));
-									g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
+								if (remainder > 0) {
+									for (int i = (int)gameWorld.getPlayer().getMaxArmor() - remainder; i < (int)gameWorld.getPlayer().getMaxArmor(); i++) {
+										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Empty.png"));
+										g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
+										remainder--;
+									}
 								}
+							}else{
+								int remainder = (int)gameWorld.getPlayer().getMaxArmor();
+								for (int i = 0; i < gameWorld.getPlayer().getArmor(); i++) {
+									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor.png"));
+									g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
+									remainder--;
+								}
+								if (remainder > 0) {
+									for (int i = (int)gameWorld.getPlayer().getMaxArmor() - remainder; i < (int)gameWorld.getPlayer().getMaxArmor(); i++) {
+										BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Empty.png"));
+										g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * i)), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
+									}
+								}
+								BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Half.png"));
+								g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * (int)gameWorld.getPlayer().getArmor())), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
 							}
-							BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Armor Half.png"));
-							g2d.drawImage(tileImage, armorStartX + (ARMOR_TILE_OFFSET + (ARMOR_TILE_SIZE * (int)gameWorld.getPlayer().getArmor())), armorStartY, ARMOR_TILE_SIZE, ARMOR_TILE_SIZE, this);
+						}catch (Exception e) {
+							e.printStackTrace();
 						}
-					}catch (Exception e) {
-						e.printStackTrace();
 					}
+					//Paint Inventory
+					if (drawInventory) {
+						//gameListener.enableKeyListening(false);
+						//gameListener.enableMouseListening(false);
+						BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Inventory.png"));
+						g2d.drawImage(tileImage, inventoryStartX, inventoryStartY, inventorySpanX, inventorySpanY, this);
+						g2d.drawImage(gameWorld.getPlayer().getImage(), inventoryStartX + (inventoryStartX / 6), inventoryStartY + (inventoryStartY / 5), 50, 100, this);
+					}else{
+						//gameListener.enableKeyListening(true);
+						//gameListener.enableMouseListening(true);
+					}
+
 				}else{
 					gameWorld = new World(BLOCK_SIZE);
 					HEALTH_QTY = gameWorld.getPlayer().PLAYER_MAX_HEALTH;
@@ -520,6 +557,13 @@ public class Frame extends JFrame{
 		hungerStartY = healthStartY;
 	}
 
+	public void calculateInventoryStart() {
+		inventoryStartX = armorStartX + 5;
+		inventoryStartY = (armorStartY - this.getHeight() / 2) - 80;
+		inventorySpanX = hotbarSize - 5;
+		inventorySpanY = (this.getHeight() / 2) - 20;
+	}
+
 	public void calculateViewport() {
 		boolean recalculate = false;
 		if (gameWorld.getPlayer().getTrueLocation().x < viewStartX + 5 || gameWorld.getPlayer().getTrueLocation().x > viewX - 5) {
@@ -565,6 +609,27 @@ public class Frame extends JFrame{
 		this.setTitle("SwagCraft " + version  + " - " + gameWorld.getIterations() + " i/s");
 	}
 
+	public void clearMenus() {
+		try {
+			Frame.this.remove(gameMenu);	
+		}catch (Exception e) {
+
+		}
+		try {
+			Frame.this.remove(singleMenu);	
+		}catch (Exception e) {
+
+		}
+		try {
+			Frame.this.remove(multiMenu);	
+		}catch (Exception e) {
+
+		}
+		gameMenu = null;
+		singleMenu = null;
+		multiMenu = null;
+	}
+
 	public class GameListener implements ActionListener, KeyListener, MouseListener, ComponentListener, MouseMotionListener {
 		private final int PLACE_SPACING = 2; //Set to 0 to Disable
 		private final int BREAK_SPACING = 1; //Set to 0 to Disable
@@ -591,6 +656,7 @@ public class Frame extends JFrame{
 				calculateArmorStart();
 				calculateXPBarStart();
 				calculateHungerStart();
+				calculateInventoryStart();
 				setTitle();
 				isInRange = false;
 				if(trueX < gameWorld.getPlayer().getTrueLocation().x + BREAK_RADIUS && trueX > gameWorld.getPlayer().getTrueLocation().x - BREAK_RADIUS) {
@@ -623,7 +689,70 @@ public class Frame extends JFrame{
 					gameWorld.getPlayer().jump(10);
 				}
 			}
-			draw();
+			if (thisUIState == UIState.Menu) {
+				if (gameMenu == null) {
+					clearMenus();
+					gameMenu = new Menu();
+					gameMenu.setLocation(new Point(0, 0));
+					gameMenu.setSize(Frame.this.getSize());
+					gameMenu.setVisible(true);
+					gameMenu.setBackground(Color.BLACK);
+					Frame.this.add(gameMenu, BorderLayout.CENTER);
+				}
+				Frame.this.setCursor(Cursor.DEFAULT_CURSOR);
+				gameMenu.setVisible(true);
+				if (gameMenu.isDone) {
+					thisUIState = gameMenu.endState;
+				}
+				gameMenu.validate();
+				gameMenu.repaint();
+			}else if (thisUIState == UIState.Menu_Singleplayer) {
+				if (singleMenu == null) {
+					clearMenus();
+					singleMenu = new Singleplayer();
+					singleMenu.setLocation(new Point(0, 0));
+					singleMenu.setSize(Frame.this.getSize());
+					singleMenu.setVisible(true);
+					singleMenu.setBackground(Color.BLACK);
+					Frame.this.add(singleMenu, BorderLayout.CENTER);
+				}
+				Frame.this.setCursor(Cursor.DEFAULT_CURSOR);
+				singleMenu.setVisible(true);
+				if (singleMenu.isDone) {
+					thisUIState = singleMenu.endState;
+				}
+				singleMenu.validate();
+				singleMenu.repaint();
+			}else if (thisUIState == UIState.Menu_Multiplayer) {
+				if (multiMenu == null) {
+					clearMenus();
+					multiMenu = new Multiplayer();
+					multiMenu.setLocation(new Point(0, 0));
+					multiMenu.setSize(Frame.this.getSize());
+					multiMenu.setVisible(true);
+					multiMenu.setBackground(Color.BLACK);
+					Frame.this.add(multiMenu, BorderLayout.CENTER);
+				}
+				Frame.this.setCursor(Cursor.DEFAULT_CURSOR);
+				multiMenu.setVisible(true);
+				if (multiMenu.isDone) {
+					thisUIState = multiMenu.endState;
+				}
+				multiMenu.validate();
+				multiMenu.repaint();
+			}else if (thisUIState == UIState.Game) {
+				if (gameWorld == null) {
+					Frame.this.setCursor(Cursor.CROSSHAIR_CURSOR);
+					gameWorld = new World(BLOCK_SIZE);
+					while(!gameWorld.loadComplete) {
+						
+					}
+					Frame.this.removeAll();
+					clearMenus();
+				}else{
+					draw();
+				}
+			}
 		}
 
 		@Override
@@ -669,7 +798,11 @@ public class Frame extends JFrame{
 				}
 				if (e.getKeyCode() == e.VK_F3) {
 					showDebug = !showDebug;
-				}
+				}	
+			}
+			if (e.getKeyChar() == 'e') {
+				System.out.println("Inventory Toggled.");
+				drawInventory = !drawInventory;
 			}
 		}
 

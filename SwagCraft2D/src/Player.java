@@ -39,7 +39,8 @@ public class Player {
 	private boolean canMoveLeft = true;
 	private boolean canMoveRight = true;
 	private boolean canJump = false;
-
+	private boolean isSurvival = true;
+	
 	public Player(Position pos, int blockSize) {
 		BLOCK_SIZE = blockSize;
 		PLAYER_JUMP_HEIGHT = BLOCK_SIZE;
@@ -50,6 +51,25 @@ public class Player {
 		playerArmor = 0;
 		playerHunger = PLAYER_MAX_HUNGER;
 		playerXP = 0;
+	}
+	
+	public Player(Position pos, int blockSize, WorldDrop[] hotbar, WorldDrop[][] inventory, int xp, int armor, int health, int hunger) {
+		playerPosition = pos;
+		BLOCK_SIZE = blockSize;
+		playerHotbar = hotbar;
+		playerInventory = inventory;
+		playerXP = xp;
+		playerArmor = armor;
+		playerHealth = health;
+		playerHunger = hunger;
+	}
+	
+	public void setSurvival(boolean s) {
+		isSurvival = s;
+	}
+	
+	public boolean getSurvival() {
+		return isSurvival;
 	}
 
 	public void convertCoords(int size) {

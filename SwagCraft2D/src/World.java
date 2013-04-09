@@ -1,6 +1,12 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.util.Random;
+
+import javax.swing.JOptionPane;
 import javax.swing.Timer;
 
 public class World {
@@ -34,6 +40,7 @@ public class World {
 	private double timeScope = 0;
 	private int time = 0;
 	private int dayClock = 0;
+	boolean loadComplete = false;
 
 	public World(int blockSize) {
 		BLOCK_SIZE = blockSize;
@@ -45,6 +52,41 @@ public class World {
 			}
 		}
 		terrainDrops = new WorldDrop[10000];
+		numDrops = 0;
+		worldPhysics = new WorldPhysics();
+		worldPhysicsTimer = new Timer(TICK_SPEED, worldPhysics);
+		generate();
+		worldPhysicsTimer.start();
+	}
+
+	public World (int blockSize, File f) {
+		BLOCK_SIZE = blockSize;
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader(f));
+			String line;
+			int x = 0;
+			int y = 0;
+			String name = br.readLine();
+			String date = br.readLine();
+			String time = br.readLine();
+			if ((line = br.readLine()) != "-") {
+				
+			}
+			while ((line = br.readLine()) != "--") {
+				for (String s : line.split(",")) {
+					terrainMap[x][y] = new Block(Block.BlockType.valueOf(s));
+					x++;
+				}
+				y++;
+			}
+			br.close();
+			WORLD_SIZE_X = x;
+			WORLD_SIZE_Y = y;
+		} catch (Exception e) {
+			JOptionPane.showMessageDialog(null, "An error occured while converting the file into BaseEntity Data. This could be due to an altered World Configuration, a corrupted World Index, or a broken/unsupported World File. We apologize for the inconvenience.", "Fatal Error", JOptionPane.ERROR_MESSAGE);
+			System.exit(-1);
+		}
 		numDrops = 0;
 		worldPhysics = new WorldPhysics();
 		worldPhysicsTimer = new Timer(TICK_SPEED, worldPhysics);
@@ -158,6 +200,7 @@ public class World {
 		validateTerrain();
 		System.out.println("Terrain Spawn Complete!");
 		setPhysicsMode(true);
+		loadComplete = true;
 	}
 
 	public void generateTerrain() {
@@ -390,6 +433,7 @@ public class World {
 				if (x == mx) {
 					if (y == my) {
 						terrainDrops[increment] = null;
+						break;
 					}
 				}
 			}catch (Exception e) {

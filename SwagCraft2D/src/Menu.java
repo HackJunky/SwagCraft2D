@@ -12,6 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 public class Menu extends JPanel {
@@ -19,6 +20,7 @@ public class Menu extends JPanel {
 	JButton btnSingleplayer = new JButton("Singleplayer");
 	JButton btnMultiplayer = new JButton("Multiplayer");
 	JButton btnQuit = new JButton("Quit");
+	JButton btnOptions = new JButton("Options");
 	ButtonListener buttonListener = new ButtonListener();
 	boolean isDone = false;
 	Frame.UIState endState;
@@ -28,9 +30,11 @@ public class Menu extends JPanel {
 		clearStyle(btnSingleplayer);
 		clearStyle(btnMultiplayer);
 		clearStyle(btnQuit);
+		clearStyle(btnOptions);
 		this.setLayout(null);
 		btnSingleplayer.addActionListener(buttonListener);
 		btnMultiplayer.addActionListener(buttonListener);
+		btnOptions.addActionListener(buttonListener);
 		btnQuit.addActionListener(buttonListener);
 		validate();
 		repaint();
@@ -55,6 +59,7 @@ public class Menu extends JPanel {
 		g2d.drawImage(logo, this.getSize().width / 2 - (logo.getWidth(null) / 2), this.getSize().height / 6, logo.getWidth(null), logo.getHeight(null), this);
 		boolean single = false;
 		boolean multi = false;
+		boolean options = false;
 		boolean quit = false;
 		for (Component c : this.getComponents()) {
 			if(c.equals(btnSingleplayer)) {
@@ -62,6 +67,9 @@ public class Menu extends JPanel {
 			}
 			if(c.equals(btnMultiplayer)) {
 				multi = true;
+			}
+			if (c.equals(btnOptions)) {
+				options = true;
 			}
 			if(c.equals(btnQuit)) {
 				quit = true;
@@ -79,11 +87,17 @@ public class Menu extends JPanel {
 			btnMultiplayer.setSize(btnSingleplayer.getSize());
 			btnMultiplayer.setLocation(new Point((this.getSize().width / 2) - btnMultiplayer.getWidth() / 2, btnSingleplayer.getLocation().y + btnSingleplayer.getHeight() + 10));
 		}
+		if (options == false) {
+			this.add(btnOptions);
+			btnOptions.setVisible(true);
+			btnOptions.setSize(btnSingleplayer.getSize());
+			btnOptions.setLocation(new Point((this.getSize().width / 2) - btnMultiplayer.getWidth() / 2, btnMultiplayer.getLocation().y + btnMultiplayer.getHeight() + 10));
+		}
 		if (quit == false) {
 			this.add(btnQuit);
 			btnQuit.setVisible(true);
 			btnQuit.setSize(btnSingleplayer.getSize());
-			btnQuit.setLocation(new Point((this.getSize().width / 2) - btnMultiplayer.getWidth() / 2, btnMultiplayer.getLocation().y + btnMultiplayer.getHeight() + 10));
+			btnQuit.setLocation(new Point((this.getSize().width / 2) - btnOptions.getWidth() / 2, btnOptions.getLocation().y + btnOptions.getHeight() + 10));
 		}
 		g2d.setColor(Color.BLACK);
 		Image button = Toolkit.getDefaultToolkit().getImage("data/UI/UIButton.png");
@@ -92,6 +106,9 @@ public class Menu extends JPanel {
 	
 		g2d.fillRect(btnMultiplayer.getLocation().x, btnMultiplayer.getLocation().y, btnMultiplayer.getSize().width, btnMultiplayer.getSize().height);
 		g2d.drawImage(button, btnMultiplayer.getLocation().x, btnMultiplayer.getLocation().y, btnMultiplayer.getSize().width, btnMultiplayer.getSize().height, this);
+		
+		g2d.fillRect(btnOptions.getLocation().x, btnOptions.getLocation().y, btnOptions.getSize().width, btnOptions.getSize().height);
+		g2d.drawImage(button, btnOptions.getLocation().x, btnOptions.getLocation().y, btnOptions.getSize().width, btnOptions.getSize().height, this);
 		
 		g2d.fillRect(btnQuit.getLocation().x, btnQuit.getLocation().y, btnQuit.getSize().width, btnQuit.getSize().height);
 		g2d.drawImage(button, btnQuit.getLocation().x, btnQuit.getLocation().y, btnQuit.getSize().width, btnQuit.getSize().height, this);
@@ -107,8 +124,12 @@ public class Menu extends JPanel {
 				isDone = true;
 				endState = Frame.UIState.Menu_Singleplayer;
 			}else if (arg0.getActionCommand() == "Multiplayer") {
+//				isDone = true;
+//				endState = Frame.UIState.Menu_Multiplayer;
+				JOptionPane.showMessageDialog(null, "This feature is Unsupported!", "Unsupported Error", JOptionPane.INFORMATION_MESSAGE);
+			}else if (arg0.getActionCommand() == "Options") {
 				isDone = true;
-				endState = Frame.UIState.Menu_Multiplayer;
+				endState = Frame.UIState.Menu_Options;
 			}else if (arg0.getActionCommand() == "Quit") {
 				System.out.println("SwagCraft2D Exits with Error Code 0.");
 				System.exit(0);

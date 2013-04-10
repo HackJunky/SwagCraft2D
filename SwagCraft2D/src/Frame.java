@@ -11,7 +11,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.Image;
-import java.awt.LayoutManager;
 import java.awt.MouseInfo;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -37,13 +36,14 @@ public class Frame extends JFrame{
 	private static final long serialVersionUID = -5151041547543472432L;
 	//Enumerations
 	enum UIState {
-		Game, Menu, Menu_Singleplayer, Menu_Multiplayer
+		Game, Menu, Menu_Singleplayer, Menu_Multiplayer, Menu_Options
 	}
 	//UI Components
 	Menu gameMenu;
 	Singleplayer singleMenu;
 	Multiplayer multiMenu;
-
+	Options optionsMenu;
+	
 	//UI Data
 	static final double version = 1.0;
 	int TARGET_X = 40;
@@ -117,7 +117,6 @@ public class Frame extends JFrame{
 
 	public Frame() {
 		this.setLayout(null);
-		System.out.println("Now Loading SwagCraft2D...");
 		this.setUndecorated(true);
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		this.setBounds(0, 0, screenSize.width, screenSize.height);
@@ -146,8 +145,6 @@ public class Frame extends JFrame{
 		worldWatcher.start();
 		gameListener.enableKeyListening(true);
 		gameListener.enableMouseListening(true);
-		System.out.println("SwagCraft " + version + " successfully initialized!");
-		//System.out.println("Tile Size Reticulation: Tiles are now sized at " + BLOCK_SIZE + " px.");
 		validate();
 		repaint();
 		this.setVisible(true);
@@ -279,6 +276,7 @@ public class Frame extends JFrame{
 					g2d.setColor(Color.black);
 
 					//Paint Hotbar
+					hotbarSelected = "Empty";
 					for (int i = 1; i <= HOTBAR_TILE_QTY; i++) {
 						int Gi = i; //graphics offset
 						int Ri = i - 1; //data offset
@@ -292,11 +290,6 @@ public class Frame extends JFrame{
 								}else {
 									BufferedImage tileImage = ImageTool.toBufferedImage(Toolkit.getDefaultToolkit().getImage("data/UI/Tile Unselected.png"));
 									g2d.drawImage(tileImage, hotbarStartX + (Gi * HOTBAR_TILE_SIZE), this.getSize().height - HOTBAR_TILE_SIZE - 2, HOTBAR_TILE_SIZE, HOTBAR_TILE_SIZE, this);
-								}
-								if (gameWorld.getPlayer().getHotbar()[Ri] != null) {
-									hotbarSelected = gameWorld.getPlayer().getHotbar()[Ri].getType().toString().replace('_', ' ');
-								}else{
-									hotbarSelected = "Empty";
 								}
 								try {
 									Image eTile = ((WorldDrop)gameWorld.getPlayer().getHotbar()[i]).getImage();
@@ -312,6 +305,7 @@ public class Frame extends JFrame{
 											g2d.setFont(new Font("Minecraft Regular", Font.BOLD, 17));
 										}
 										if (isSelected) {
+											hotbarSelected = gameWorld.getPlayer().getHotbar()[i].getType().toString().replace('_', ' ');
 											g2d.drawImage(aTile, x + (BLOCK_SIZE / 4), y + (BLOCK_SIZE / 4), BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, BLOCK_SIZE - (BLOCK_SIZE / 4) - 2, this);
 											String t = String.valueOf(gameWorld.getPlayer().getHotbar()[i].getQTY());
 											g2d.drawString(t, x + (HOTBAR_TILE_SIZE - fm.stringWidth(t)) - 12, y + (HOTBAR_TILE_SIZE) - (fm.getAscent()) + 3);
@@ -340,7 +334,7 @@ public class Frame extends JFrame{
 						g2d.drawString(hotbarSelected, (this.getSize().width / 2) - fm.stringWidth(hotbarSelected), armorStartY - 50);
 					}
 
-					if (gameWorld.getPlayer().getSurvival()) {
+					if (!gameWorld.getPlayer().getSurvival()) {
 						//Paint Hearts
 						try {
 							if (Math.round(gameWorld.getPlayer().getHealth()) == gameWorld.getPlayer().getHealth()) {
@@ -491,9 +485,6 @@ public class Frame extends JFrame{
 						//gameListener.enableMouseListening(true);
 					}
 
-				}else{
-					gameWorld = new World(BLOCK_SIZE);
-					HEALTH_QTY = gameWorld.getPlayer().PLAYER_MAX_HEALTH;
 				}
 			}
 			if (showDebug) {
@@ -642,7 +633,12 @@ public class Frame extends JFrame{
 		private int lastBreak = 0;
 		private boolean moveLeft = false;
 		private boolean moveRight = false;
-
+		private int gameMode = -1;
+		private int sizeX = -1;
+		private int sizeY = -1;
+		private File gameFile;
+		private int loadMode = -1;
+		
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (gameWorld != null) {
@@ -718,6 +714,10 @@ public class Frame extends JFrame{
 				}
 				Frame.this.setCursor(Cursor.DEFAULT_CURSOR);
 				singleMenu.setVisible(true);
+				loadMode = singleMenu.mode - 1;
+				gameMode = singleMenu.gameMode;
+				sizeX = singleMenu.sizeX;
+				sizeY = singleMenu.sizeY;
 				if (singleMenu.isDone) {
 					thisUIState = singleMenu.endState;
 				}
@@ -740,10 +740,38 @@ public class Frame extends JFrame{
 				}
 				multiMenu.validate();
 				multiMenu.repaint();
+			}else if (thisUIState == UIState.Menu_Options) {
+				if (optionsMenu == null) {
+					clearMenus();
+					optionsMenu = new Options();
+					optionsMenu.setLocation(new Point(0, 0));
+					optionsMenu.setSize(Frame.this.getSize());
+					optionsMenu.setVisible(true);
+					optionsMenu.setBackground(Color.BLACK);
+					Frame.this.add(optionsMenu, BorderLayout.CENTER);
+				}
+				Frame.this.setCursor(Cursor.DEFAULT_CURSOR);
+				optionsMenu.setVisible(true);
+				if (optionsMenu.isDone) {
+					thisUIState = optionsMenu.endState;
+				}
+				optionsMenu.validate();
+				optionsMenu.repaint();
 			}else if (thisUIState == UIState.Game) {
 				if (gameWorld == null) {
 					Frame.this.setCursor(Cursor.CROSSHAIR_CURSOR);
-					gameWorld = new World(BLOCK_SIZE);
+					if (loadMode == 0) {
+						gameWorld = new World(BLOCK_SIZE, sizeX, sizeY);
+					}else{
+						gameWorld = new World(BLOCK_SIZE, gameFile);
+					}
+					if (gameMode != -1) {
+						if (gameMode == 1) {
+							gameWorld.getPlayer().setSurvival(true);
+						}else{
+							gameWorld.getPlayer().setSurvival(false);
+						}
+					}
 					while(!gameWorld.loadComplete) {
 						
 					}

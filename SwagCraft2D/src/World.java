@@ -42,7 +42,9 @@ public class World {
 	private int dayClock = 0;
 	boolean loadComplete = false;
 
-	public World(int blockSize) {
+	public World(int blockSize, int worldSizeX, int worldSizeY) {
+		WORLD_SIZE_X = worldSizeX;
+		WORLD_SIZE_Y = worldSizeY;
 		BLOCK_SIZE = blockSize;
 		terrainMap = new BaseEntity[WORLD_SIZE_X][WORLD_SIZE_Y];
 		lightMap = new double[WORLD_SIZE_X][WORLD_SIZE_Y];
@@ -561,7 +563,16 @@ public class World {
 			if (getPlayer().distanceMoved > 500) {
 				getPlayer().takeHunger(0.5);
 				getPlayer().distanceMoved = 0;
+				
 			}
+			if (getPlayer().getHunger() <= 0.5) {
+				getPlayer().takeDamage(0.01);
+			}
+			if (getPlayer().getHunger() > 3 && getPlayer().getHealth() < getPlayer().getMaxHealth()) {
+				getPlayer().takeDamage(-0.005);
+				getPlayer().takeHunger(0.01);
+			}
+			getPlayer().takeHunger(0.001);
 			blockX = getPlayer().getTrueLocation().x;
 			blockY = getPlayer().getTrueLocation().y;
 			//Drop Iterations
@@ -609,6 +620,10 @@ public class World {
 	public class WorldPhysics implements ActionListener{
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
+			if (getPlayer().isDead) {
+				System.out.println("Player Respawned!");
+				player = new Player(new Position((WORLD_SIZE_X / 2) * BLOCK_SIZE, 70 * BLOCK_SIZE), BLOCK_SIZE);
+			}
 			physicsTick();
 			ticks++;
 			if (ticks > TICKS_PER_SECOND) {

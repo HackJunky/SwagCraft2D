@@ -8,7 +8,7 @@ public class Player {
 	//Sets
 	private int BLOCK_SIZE = 0;
 	//Compiler Conditions
-	final int HOTBAR_SIZE = new Panel().HOTBAR_TILE_QTY;
+	final int HOTBAR_SIZE = 9;
 	final int INVENTORY_WIDTH = 10;
 	final int INVENTORY_HEIGHT = 4;
 	final int PLAYER_MAX_HEALTH = 10;
@@ -39,7 +39,8 @@ public class Player {
 	private boolean canMoveLeft = true;
 	private boolean canMoveRight = true;
 	private boolean canJump = false;
-	private boolean isSurvival = true;
+	private boolean isSurvival = false;
+	boolean isDead = false;
 	
 	public Player(Position pos, int blockSize) {
 		BLOCK_SIZE = blockSize;
@@ -52,7 +53,7 @@ public class Player {
 		playerHunger = PLAYER_MAX_HUNGER;
 		playerXP = 0;
 	}
-	
+
 	public Player(Position pos, int blockSize, WorldDrop[] hotbar, WorldDrop[][] inventory, int xp, int armor, int health, int hunger) {
 		playerPosition = pos;
 		BLOCK_SIZE = blockSize;
@@ -63,11 +64,16 @@ public class Player {
 		playerHealth = health;
 		playerHunger = hunger;
 	}
-	
+
 	public void setSurvival(boolean s) {
 		isSurvival = s;
+		if (isSurvival) {
+			System.out.println("Gamemode changed to Survival.");
+		}else{
+			System.out.println("Gamemode changed to Creative.");
+		}
 	}
-	
+
 	public boolean getSurvival() {
 		return isSurvival;
 	}
@@ -132,7 +138,9 @@ public class Player {
 	}
 
 	public void takeHunger(double i) {
-		playerHunger -= i;
+		if (!isSurvival) {
+			playerHunger -= i;
+		}
 	}
 
 	public Point getTrueLocation() {
@@ -226,8 +234,16 @@ public class Player {
 
 	//Player Functions
 	public void takeDamage(double damage) {
-		playerHealth -= damage;
-		System.out.println("Player takes " + damage + " damage.");
+		if (!isSurvival) {
+			playerHealth -= damage;
+			System.out.println("Player takes " + damage + " damage.");
+			if (playerHealth < 0) {
+				isDead = true;
+			}
+		}
+		if (damage > 0) {
+			
+		}
 	}
 
 	public boolean itemPickup(WorldDrop i) {

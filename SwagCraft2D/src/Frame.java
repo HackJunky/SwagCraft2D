@@ -43,7 +43,7 @@ public class Frame extends JFrame{
 	Singleplayer singleMenu;
 	Multiplayer multiMenu;
 	Options optionsMenu;
-	
+
 	//UI Data
 	static final double version = 1.0;
 	int TARGET_X = 40;
@@ -110,6 +110,10 @@ public class Frame extends JFrame{
 	private int loaded = 0;
 	private boolean showDebug = false;
 	private String debug = "SwagCraft Version " + version + " Debugger" + EOL;
+
+	//Graphic Vars
+	private boolean drawShaders = true;
+	private boolean drawCycles = true;
 
 	//Cursor Vars
 	private Point mouseLoc = new Point(0, 0);
@@ -221,9 +225,11 @@ public class Frame extends JFrame{
 								BufferedImage img = ImageTool.toBufferedImage(tile);
 								g2d.drawImage(tile, (x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE, this);
 								float a = (float)gameWorld.getLightValue(x, y);
-								g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, a));
-								g2d.fillRect((x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-								g2d.setComposite(def);
+								if (drawCycles) {
+									g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, a));
+									g2d.fillRect((x - viewStartX) * BLOCK_SIZE, (y - viewStartY) * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+									g2d.setComposite(def);
+								}
 								loaded++;
 								if (isInRange && x == trueX && y == trueY) {
 									Image highlight = Toolkit.getDefaultToolkit().getImage("data/UI/Highlight.png");
@@ -243,6 +249,21 @@ public class Frame extends JFrame{
 					int drawY = (int)(playerLoc.y - (viewStartY * BLOCK_SIZE));
 					g2d.drawImage(playerImage, drawX, drawY, BLOCK_SIZE, 2 * BLOCK_SIZE, this);
 
+					//Paint Player Holding Block
+					try {
+						if (gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()] != null) {
+							if (gameWorld.getPlayer().getDirection() == 0) {
+								g2d.drawImage(gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getImage(), drawX, drawY + (playerImage.getHeight(null)), DROP_SIZE, DROP_SIZE, this);
+							}else if (gameWorld.getPlayer().getDirection() == 1) {
+								g2d.drawImage(gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getImage(), drawX + playerImage.getWidth(null), drawY + (playerImage.getHeight(null)), DROP_SIZE, DROP_SIZE, this);
+							}else if (gameWorld.getPlayer().getDirection() == -1) {
+								g2d.drawImage(gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getImage(), drawX + 5, drawY + (playerImage.getHeight(null)), DROP_SIZE, DROP_SIZE, this);
+							}
+						}
+					}catch (Exception e) {
+
+					}
+
 					//Paint Player Tooltip
 					String pTooltip = "Player (" + (playerLoc.x / BLOCK_SIZE) + ", " + (playerLoc.y / BLOCK_SIZE) + ")";
 					g2d.setColor(Color.BLACK);
@@ -257,10 +278,12 @@ public class Frame extends JFrame{
 							int x = (d.getX() - (viewStartX * BLOCK_SIZE)) + (DROP_SIZE / 2);
 							int y = (d.getY() - (viewStartY * BLOCK_SIZE)) + (DROP_SIZE);
 							g2d.drawImage(d.getImage(), x, y, DROP_SIZE, DROP_SIZE, this);
-							float a = (float)gameWorld.getLightValue((d.getX() / BLOCK_SIZE) - viewStartX, (d.getY() / BLOCK_SIZE) - viewStartY);
-							g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, a));
-							g2d.fillRect(x, y, DROP_SIZE, DROP_SIZE);
-							g2d.setComposite(def);
+							float ab = (float)gameWorld.getLightValue((d.getX() / BLOCK_SIZE) - viewStartX, (d.getY() / BLOCK_SIZE) - viewStartY);
+							if (drawShaders) {
+								g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, ab));
+								g2d.fillRect(x, y, DROP_SIZE, DROP_SIZE);
+								g2d.setComposite(def);
+							}
 						}
 					}
 
@@ -622,7 +645,7 @@ public class Frame extends JFrame{
 	}
 
 	public class GameListener implements ActionListener, KeyListener, MouseListener, ComponentListener, MouseMotionListener {
-		private final int PLACE_SPACING = 2; //Set to 0 to Disable
+		private final int PLACE_SPACING = 5; //Set to 0 to Disable
 		private final int BREAK_SPACING = 1; //Set to 0 to Disable
 		private boolean keyEnabled = false;
 		private boolean mouseEnabled = false;
@@ -638,7 +661,7 @@ public class Frame extends JFrame{
 		private int sizeY = -1;
 		private File gameFile;
 		private int loadMode = -1;
-		
+
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (gameWorld != null) {
@@ -663,7 +686,15 @@ public class Frame extends JFrame{
 				if (rightMouseDown && isInRange) {
 					lastPlace++;
 					if (lastPlace == PLACE_SPACING) {
-						gameWorld.spawnBlock(Block.BlockType.Sand, trueX, trueY);
+						if (gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()] != null && ((Block)gameWorld.getTerrain()[trueX][trueY]).getType() == Block.BlockType.Air) {
+							if (gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getQTY() > gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getQTY() - 1 && gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getQTY() > 0) {
+								gameWorld.spawnBlock(gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getType(), trueX, trueY);
+								gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].addQTY(-1);
+							}
+							if (gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()].getQTY() <= 0) {
+								gameWorld.getPlayer().getHotbar()[gameWorld.getPlayer().getSelectedSpace()] = null;
+							}
+						}
 						lastPlace = 0;
 					}
 				}
@@ -773,7 +804,7 @@ public class Frame extends JFrame{
 						}
 					}
 					while(!gameWorld.loadComplete) {
-						
+
 					}
 					Frame.this.removeAll();
 					clearMenus();

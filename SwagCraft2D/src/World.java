@@ -73,7 +73,7 @@ public class World {
 			String date = br.readLine();
 			String time = br.readLine();
 			if ((line = br.readLine()) != "-") {
-				
+
 			}
 			while ((line = br.readLine()) != "--") {
 				for (String s : line.split(",")) {
@@ -552,27 +552,25 @@ public class World {
 			}else{
 				getPlayer().setCanJump(true);
 			}
-			if (getPlayer().canJump()) {
-				if (getPlayer().fallDistance > 0) {
-					if (getPlayer().fallDistance / BLOCK_SIZE > 2) {
-						getPlayer().takeDamage(0.5 * (getPlayer().fallDistance / BLOCK_SIZE) / 2);
-						getPlayer().fallDistance = 0;
-					}
+			if (getPlayer().fallDistance > 0) {
+				if (getPlayer().fallDistance / BLOCK_SIZE > 1) {
+					getPlayer().takeDamage(0.5 * (getPlayer().fallDistance / BLOCK_SIZE));
 				}
+				getPlayer().fallDistance = 0;
 			}
 			if (getPlayer().distanceMoved > 500) {
 				getPlayer().takeHunger(0.5);
 				getPlayer().distanceMoved = 0;
-				
+
 			}
 			if (getPlayer().getHunger() <= 0.5) {
 				getPlayer().takeDamage(0.01);
 			}
 			if (getPlayer().getHunger() > 3 && getPlayer().getHealth() < getPlayer().getMaxHealth()) {
 				getPlayer().takeDamage(-0.005);
-				getPlayer().takeHunger(0.01);
+				getPlayer().takeHunger(0.001);
 			}
-			getPlayer().takeHunger(0.001);
+			getPlayer().takeHunger(0.0001);
 			blockX = getPlayer().getTrueLocation().x;
 			blockY = getPlayer().getTrueLocation().y;
 			//Drop Iterations

@@ -57,7 +57,7 @@ public class Options extends JPanel{
 		g2d.setFont(new Font("Minecraft Regular", Font.PLAIN, 16));
 		g2d.setColor(Color.WHITE);
 		FontMetrics fm = g.getFontMetrics();
-		Image background = Toolkit.getDefaultToolkit().getImage("data/UI/Background.png");
+		Image background = Toolkit.getDefaultToolkit().getImage("data/UI/Background Menu.png");
 		g2d.drawImage(background, 0, 0, this.getSize().width, this.getSize().height, this);
 		g2d.drawString("Change Game or Graphical Settings", this.getWidth() / 2 - (fm.stringWidth("Change Game or Graphical Settings") / 2), 100 + fm.getAscent());
 		if (allowShaders) {
@@ -66,10 +66,10 @@ public class Options extends JPanel{
 			g2d.drawString("Shaders: Inactive", this.getWidth() / 3, this.getHeight() / 3);
 		}
 		toggleShaders.setSize(150,35);
-		toggleShaders.setLocation(new Point(this.getWidth() / 2, this.getHeight() / 3 - 25));
+		toggleShaders.setLocation(new Point(this.getSize().width / 2, this.getSize().height / 3 - 25));
 		g2d.fillRect(toggleShaders.getLocation().x, toggleShaders.getLocation().y, toggleShaders.getSize().width, toggleShaders.getSize().height);
 		back.setSize(250,35);
-		back.setLocation(new Point(10, this.getHeight() - 45));
+		back.setLocation(new Point(10, this.getSize().height - 45));
 		Image button = Toolkit.getDefaultToolkit().getImage("data/UI/UIButton.png");
 		g2d.drawImage(button, toggleShaders.getLocation().x, toggleShaders.getLocation().y, toggleShaders.getSize().width, toggleShaders.getSize().height, this);
 		validate();
@@ -81,8 +81,11 @@ public class Options extends JPanel{
 		@Override
 		public void actionPerformed(ActionEvent arg0) {
 			if (arg0.getActionCommand() == "Return to Main Menu") {
+				removeAll();
 				endState = Frame.UIState.Menu;
 				isDone = true;
+			}else if (arg0.getActionCommand() == "Toggle Shaders") {
+				allowShaders = !allowShaders;
 			}
 		}
 	}

@@ -212,6 +212,10 @@ public class Player {
 		facing = 0;
 	}
 
+	public int getDirection() {
+		return direction;
+	}
+	
 	public void setJump (boolean j) {
 		isJumping = j;
 	}
@@ -254,12 +258,10 @@ public class Player {
 					playerHotbar[inc] = i;
 					System.out.println("Player picks up Hotbar item " + i.getType() + " in slot " + inc + ".");
 					return true;
-				}else if (d.getType() == i.getType()) {
+				}else if (d.getType() == i.getType() && d.getQTY() < 64) {
 					if (d.getQTY() < 64) {
 						System.out.println("Player adds to Hotbar item " + i.getType() + " to slot " + inc + ".");
 						d.addQTY(i.getQTY());
-					}else{
-						playerHotbar[inc++] = i;
 					}
 					return true;
 				}else{
